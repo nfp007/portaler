@@ -8,6 +8,8 @@ Everything is synced through the server and kept with the world save, so it surv
 
 ![Portaler next to the map](https://raw.githubusercontent.com/nfp007/portaler/main/docs/overview.jpg)
 
+![Search, sorting by distance and by biome](https://raw.githubusercontent.com/nfp007/portaler/main/docs/screenshots.jpg)
+
 Source code, issues and ideas: **[github.com/nfp007/portaler](https://github.com/nfp007/portaler)**
 
 ## Features
@@ -55,23 +57,6 @@ Source code, issues and ideas: **[github.com/nfp007/portaler](https://github.com
 **9. Optional vanilla restrictions**
 - By default every item can travel, metals included.
 - Prefer the game's own rules? Switch on `VanillaRestrictions` on the server (see Configuration).
-
-<details>
-<summary><b>More screenshots</b> (click to show)</summary>
-
-**Search**: type part of a name, matches in gold
-
-![Search](https://raw.githubusercontent.com/nfp007/portaler/main/docs/search.jpg)
-
-**Sorted by distance**, with "Back to" and favorites on top
-
-![Sorted by distance](https://raw.githubusercontent.com/nfp007/portaler/main/docs/sort-distance.jpg)
-
-**Sorted by biome**, with folded groups
-
-![Sorted by biome](https://raw.githubusercontent.com/nfp007/portaler/main/docs/sort-biome.jpg)
-
-</details>
 
 <details>
 <summary><b>Controls</b> (click to show)</summary>
