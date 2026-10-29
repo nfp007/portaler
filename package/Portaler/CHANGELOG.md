@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.5.2
+- Fixed: the "Back to" row did not show the portal name.
+- Mod page links to the GitHub repository; new screenshots.
+
 ## 0.5.1
 - New mod description and README: clearer intro, features in order of importance.
 

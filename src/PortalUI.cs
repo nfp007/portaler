@@ -22,7 +22,7 @@ namespace Portaler
         private const string SearchControl = "PortalerSearch";
         private static string _search = "";
         public static bool SearchFocused { get; private set; }
-        private static GUIStyle _searchStyle, _placeholder, _clearStyle, _backText;
+        private static GUIStyle _searchStyle, _placeholder, _clearStyle, _backText, _backLabel;
         private static Texture2D _magnifier, _backIcon;
 
         private const int NameChars = 25;      // panel must fit names this long
@@ -265,10 +265,12 @@ namespace Portaler
             var ev = Event.current;
             if (ev.type == EventType.Repaint && r.Contains(ev.mousePosition)) _hovered = p;
             if (ev.type == EventType.MouseDown && ev.button == 1 && r.Contains(ev.mousePosition)) { toggle = p; ev.Use(); }
-            if (Board(r, "<size=14><color=#dcc896>Back to:</color></size>  " + p.DisplayName, _backText, "back", 0)) travel = p;
+            // name drawn by the board itself (padding leaves room for icon + "Back to:"), label drawn separately
+            if (Board(r, p.DisplayName, _backText, "back", 0)) travel = p;
             if (ev.type == EventType.Repaint)
             {
                 GUI.DrawTexture(new Rect(r.x + 10, r.y + (r.height - 18f) / 2f, 18f, 18f), _backIcon);
+                _backLabel.Draw(new Rect(r.x + 36, r.y, 90, r.height), new GUIContent("Back to:"), false, false, false, false);
                 _hereTag.Draw(r, new GUIContent("previous portal"), false, false, false, false);
             }
         }
@@ -508,7 +510,10 @@ namespace Portaler
 
             _rowText.richText = true;
             _hereText.richText = true;
-            _backText = new GUIStyle(_rowText) { richText = true, padding = new RectOffset(36, 10, 0, 0) };
+            _backLabel = new GUIStyle(_hint) { fontSize = 14, fontStyle = FontStyle.Bold, alignment = TextAnchor.MiddleLeft, wordWrap = false, padding = new RectOffset(0, 0, 0, 0) };
+            _backLabel.normal.textColor = new Color32(220, 200, 150, 255);
+            float labelW = _backLabel.CalcSize(new GUIContent("Back to:")).x;
+            _backText = new GUIStyle(_rowText) { richText = false, padding = new RectOffset(36 + (int)labelW + 8, 120, 0, 0) };
             _searchStyle = new GUIStyle(GUI.skin.textField) { fontSize = 18, alignment = TextAnchor.MiddleLeft, padding = new RectOffset(4, 4, 0, 0) };
             _searchStyle.normal.background = _searchStyle.hover.background = _searchStyle.focused.background = _searchStyle.active.background = null;
             _searchStyle.normal.textColor = _searchStyle.hover.textColor = _searchStyle.focused.textColor = _searchStyle.active.textColor = new Color32(255, 240, 210, 255);

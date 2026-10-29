@@ -6,7 +6,9 @@ Built for servers that play together: **favorites can be personal or shared with
 
 Everything is synced through the server and kept with the world save, so it survives restarts and mod updates.
 
-![Portaler in game](https://raw.githubusercontent.com/nfp007/portaler/main/docs/screenshot.jpg)
+![Portaler next to the map](https://raw.githubusercontent.com/nfp007/portaler/main/docs/overview.jpg)
+
+Source code, issues and ideas: **[github.com/nfp007/portaler](https://github.com/nfp007/portaler)**
 
 ## Features
 
@@ -53,6 +55,23 @@ Everything is synced through the server and kept with the world save, so it surv
 **9. Optional vanilla restrictions**
 - By default every item can travel, metals included.
 - Prefer the game's own rules? Switch on `VanillaRestrictions` on the server (see Configuration).
+
+<details>
+<summary><b>More screenshots</b> (click to show)</summary>
+
+**Search**: type part of a name, matches in gold
+
+![Search](https://raw.githubusercontent.com/nfp007/portaler/main/docs/search.jpg)
+
+**Sorted by distance**, with "Back to" and favorites on top
+
+![Sorted by distance](https://raw.githubusercontent.com/nfp007/portaler/main/docs/sort-distance.jpg)
+
+**Sorted by biome**, with folded groups
+
+![Sorted by biome](https://raw.githubusercontent.com/nfp007/portaler/main/docs/sort-biome.jpg)
+
+</details>
 
 <details>
 <summary><b>Controls</b> (click to show)</summary>
@@ -116,5 +135,15 @@ Portaler must be installed on the **server and on every player**, with the same 
 <summary><b>Dependencies</b> (click to show)</summary>
 
 - [BepInExPack for Valheim](https://thunderstore.io/c/valheim/p/denikson/BepInExPack_Valheim/) 5.4.2351 or newer
+
+</details>
+
+<details>
+<summary><b>Source code & feedback</b> (click to show)</summary>
+
+- Source code: [github.com/nfp007/portaler](https://github.com/nfp007/portaler)
+- Bugs and ideas: [open an issue](https://github.com/nfp007/portaler/issues)
+- Building from source: see [BUILDING.md](https://github.com/nfp007/portaler/blob/main/BUILDING.md)
+- License: MIT
 
 </details>
