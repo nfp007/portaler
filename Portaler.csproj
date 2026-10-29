@@ -1,0 +1,45 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!-- Portaler: private family portal mod for Valheim.
+       Build:  dotnet build -c Release
+       Paths below point to lib/ (BepInEx core) and lib/valheim (game DLLs). -->
+  <PropertyGroup>
+    <TargetFramework>net48</TargetFramework>
+    <AssemblyName>Portaler</AssemblyName>
+    <RootNamespace>Portaler</RootNamespace>
+    <LangVersion>9.0</LangVersion>
+    <Nullable>disable</Nullable>
+    <Version>0.5.1</Version>
+    <GenerateDocumentationFile>false</GenerateDocumentationFile>
+    <AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>
+    <!-- Offline build: use the game's own framework DLLs instead of NuGet reference packs -->
+    <AutomaticallyUseReferenceAssemblyPackages>false</AutomaticallyUseReferenceAssemblyPackages>
+    <DisableImplicitFrameworkReferences>true</DisableImplicitFrameworkReferences>
+    <FrameworkPathOverride>$(MSBuildThisFileDirectory)lib/valheim</FrameworkPathOverride>
+    <NoStdLib>true</NoStdLib>
+    <GameLib>$(MSBuildThisFileDirectory)lib/valheim/</GameLib>
+    <CoreLib>$(MSBuildThisFileDirectory)lib/core/</CoreLib>
+  </PropertyGroup>
+  <ItemGroup>
+    <Reference Include="mscorlib"><HintPath>$(GameLib)mscorlib.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="netstandard"><HintPath>$(GameLib)netstandard.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="System"><HintPath>$(GameLib)System.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="System.Core"><HintPath>$(GameLib)System.Core.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="assembly_valheim"><HintPath>$(GameLib)assembly_valheim.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="assembly_utils"><HintPath>$(GameLib)assembly_utils.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="Splatform"><HintPath>$(GameLib)Splatform.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="UnityEngine"><HintPath>$(GameLib)UnityEngine.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="UnityEngine.CoreModule"><HintPath>$(GameLib)UnityEngine.CoreModule.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="UnityEngine.ImageConversionModule"><HintPath>$(GameLib)UnityEngine.ImageConversionModule.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="UnityEngine.IMGUIModule"><HintPath>$(GameLib)UnityEngine.IMGUIModule.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="UnityEngine.TextRenderingModule"><HintPath>$(GameLib)UnityEngine.TextRenderingModule.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="UnityEngine.PhysicsModule"><HintPath>$(GameLib)UnityEngine.PhysicsModule.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="UnityEngine.InputLegacyModule"><HintPath>$(GameLib)UnityEngine.InputLegacyModule.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="UnityEngine.UI"><HintPath>$(GameLib)UnityEngine.UI.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="UnityEngine.UIModule"><HintPath>$(GameLib)UnityEngine.UIModule.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="BepInEx"><HintPath>$(CoreLib)BepInEx.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="0Harmony"><HintPath>$(CoreLib)0Harmony.dll</HintPath><Private>false</Private></Reference>
+  </ItemGroup>
+  <ItemGroup>
+    <EmbeddedResource Include="art/pin64.png" LogicalName="Portaler.pin64.png" />
+  </ItemGroup>
+</Project>

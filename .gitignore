@@ -1,0 +1,13 @@
+# build output
+bin/
+obj/
+build/
+package/*.zip
+
+# game and BepInEx DLLs (copyrighted, never commit)
+lib/
+
+# IDE
+.vs/
+.vscode/
+*.user
