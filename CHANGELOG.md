@@ -1,5 +1,8 @@
 # Changelog
 
+## 0.5.3
+- Mod page: three smaller screenshots (search, distance sorting, biome sorting) under the main one.
+
 ## 0.5.2
 - Fixed: the "Back to" row did not show the portal name.
 - Mod page links to the GitHub repository; new screenshots.
