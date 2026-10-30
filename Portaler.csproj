@@ -8,7 +8,7 @@
     <RootNamespace>Portaler</RootNamespace>
     <LangVersion>9.0</LangVersion>
     <Nullable>disable</Nullable>
-    <Version>0.5.3</Version>
+    <Version>1.0.0</Version>
     <GenerateDocumentationFile>false</GenerateDocumentationFile>
     <AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>
     <!-- Offline build: use the game's own framework DLLs instead of NuGet reference packs -->
@@ -40,6 +40,6 @@
     <Reference Include="0Harmony"><HintPath>$(CoreLib)0Harmony.dll</HintPath><Private>false</Private></Reference>
   </ItemGroup>
   <ItemGroup>
-    <EmbeddedResource Include="art/pin64.png" LogicalName="Portaler.pin64.png" />
+    <EmbeddedResource Include="art/cat_*.png;art/pin_*.png" LogicalName="Portaler.%(Filename)%(Extension)" />
   </ItemGroup>
 </Project>

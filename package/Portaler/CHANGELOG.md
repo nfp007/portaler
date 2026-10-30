@@ -1,5 +1,13 @@
 # Changelog
 
+## 1.0.0
+- First stable release.
+- Hover a name: the map glides to that portal and its pin glows (delay, zoom and return configurable).
+- Categories: press T over a name to choose Base, Mine, Farm, Trader, Boss, Danger, Dungeon or Explore. Icon in the list and as a badge on the map pin, shared with everybody.
+- Category filter: one click on an icon shows only that category.
+- Favorites: drag them into your own order (per character); new favorites go to the end.
+- Configurable keys: `RenameKey` (E) and `CategoryKey` (T).
+
 ## 0.5.3
 - Mod page: three smaller screenshots (search, distance sorting, biome sorting) under the main one.
 

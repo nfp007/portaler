@@ -51,6 +51,7 @@ namespace Portaler
         private static readonly Dictionary<ZDOID, Minimap.PinData> Pins = new Dictionary<ZDOID, Minimap.PinData>();
         private static bool _pinsDirty;
         private static Sprite _pinSprite;
+        private static readonly HashSet<Sprite> OurSprites = new HashSet<Sprite>();
         private static float _nextForeignScan;
         private const float ForeignPinRadius = 4f;
         private static readonly AccessTools_FieldRef PinsField = new AccessTools_FieldRef();
@@ -84,11 +85,56 @@ namespace Portaler
             _pinsDirty = true;
         }
 
-        // package: personal ids, then shared ids
+        /// <summary>This player's order of favorites (first = top). Favorites missing here go to the end.</summary>
+        public static List<ZDOID> FavOrder = new List<ZDOID>();
+
+        // package: personal ids, shared ids, personal order
         private static void OnFavs(long sender, ZPackage pkg)
         {
             Favorites = ReadIds(pkg);
             SharedFavorites = ReadIds(pkg);
+            FavOrder = new List<ZDOID>(ReadIdList(pkg));
+        }
+
+        private static List<ZDOID> ReadIdList(ZPackage pkg)
+        {
+            var list = new List<ZDOID>();
+            if (pkg.GetPos() >= pkg.Size()) return list;
+            int n = pkg.ReadInt();
+            for (int i = 0; i < n; i++) list.Add(pkg.ReadZDOID());
+            return list;
+        }
+
+        /// <summary>Favorites in this player's own order; ones not ordered yet (e.g. newly shared by others) at the end.</summary>
+        public static List<PortalInfo> OrderedFavorites(IEnumerable<PortalInfo> from)
+        {
+            var favs = from.Where(IsFavorite).ToList();
+            var rank = new Dictionary<ZDOID, int>();
+            for (int i = 0; i < FavOrder.Count; i++) if (!rank.ContainsKey(FavOrder[i])) rank[FavOrder[i]] = i;
+            return favs.OrderBy(p => rank.TryGetValue(p.Id, out int r) ? r : int.MaxValue)
+                       .ThenBy(p => p.DisplayName, StringComparer.OrdinalIgnoreCase).ToList();
+        }
+
+        /// <summary>Drag and drop result: store the new order locally and on the server.</summary>
+        public static void SetFavoriteOrder(List<PortalInfo> ordered)
+        {
+            FavOrder = ordered.Select(p => p.Id).ToList();
+            if (ZRoutedRpc.instance == null || LocalPlayerId == 0) return;
+            var pkg = new ZPackage();
+            pkg.Write(FavOrder.Count);
+            foreach (var id in FavOrder) pkg.Write(id);
+            ZRoutedRpc.instance.InvokeRoutedRPC(PortalServer.RpcSetFavOrder, LocalPlayerId, pkg);
+        }
+
+        /// <summary>Set a portal's category (shared with everybody).</summary>
+        public static void SetCategory(PortalInfo p, int category)
+        {
+            if (p == null || ZRoutedRpc.instance == null) return;
+            category = Categories.Clamp(category);
+            foreach (var x in Portals) if (x.Id == p.Id) x.Category = category; // show it right away
+            p.Category = category;
+            _pinsDirty = true;
+            ZRoutedRpc.instance.InvokeRoutedRPC(PortalServer.RpcSetCategory, p.Id, category);
         }
 
         private static void OnShared(long sender, ZPackage pkg) => SharedFavorites = ReadIds(pkg);
@@ -189,7 +235,7 @@ namespace Portaler
             // Optimistic local update; the server answers with the stored lists.
             switch (GetFav(p))
             {
-                case FavState.None: Favorites.Add(p.Id); break;
+                case FavState.None: Favorites.Add(p.Id); if (!FavOrder.Contains(p.Id)) FavOrder.Add(p.Id); break;
                 case FavState.Personal: Favorites.Remove(p.Id); SharedFavorites.Add(p.Id); break;
                 default: SharedFavorites.Remove(p.Id); Favorites.Remove(p.Id); break;
             }
@@ -221,6 +267,10 @@ namespace Portaler
         {
             if (!Active) return;
             Active = false;
+            // put the map view back where it was before hovering moved it
+            if (_saved && Minimap.instance != null) { MapOffset(Minimap.instance) = _savedOffset; Minimap.instance.LargeZoom = _savedZoom; }
+            _saved = false; _moving = false; _returning = false;
+            StopGlow();
             SourceId = ZDOID.None;
             _sourceTransform = null;
             if (closeMap && Minimap.instance != null && Minimap.instance.m_mode == Minimap.MapMode.Large)
@@ -236,10 +286,11 @@ namespace Portaler
                 _nextForeignScan = Time.time + 0.5f;
                 ReskinForeignPins();
             }
-            if (!Active) return;
+            if (!Active) { _hoverPortal = null; _hoverSince = 0f; StopGlow(); _saved = false; return; }
 
             var player = Player.m_localPlayer;
             if (player == null || Minimap.instance == null) { Deactivate(false); return; }
+            UpdateMapFocus();
 
             // The player closed the map (Esc / M) -> leave the mode.
             if (Time.time - _activatedAt > 0.3f && Minimap.instance.m_mode != Minimap.MapMode.Large)
@@ -254,6 +305,86 @@ namespace Portaler
             {
                 Deactivate(true);
             }
+        }
+
+        // ---------- hover a name -> show it on the map ----------
+
+        private static readonly HarmonyLib.AccessTools.FieldRef<Minimap, Vector3> MapOffset =
+            HarmonyLib.AccessTools.FieldRefAccess<Minimap, Vector3>("m_mapOffset");
+
+        private static PortalInfo _hoverPortal;
+        private static float _hoverSince, _leftListAt;
+        private static ZDOID _glowId = ZDOID.None;
+        private static bool _saved, _returning;
+        private static Vector3 _savedOffset, _targetOffset;
+        private static float _savedZoom, _targetZoom;
+        private static bool _moving;
+
+        private static void UpdateMapFocus()
+        {
+            var map = Minimap.instance;
+            if (!Plugin.HoverShowsMap.Value || map.m_mode != Minimap.MapMode.Large) return;
+            var player = Player.m_localPlayer;
+            var hovered = PortalUI.HoveredPortal;
+
+            if (hovered != null)
+            {
+                _leftListAt = 0f;
+                if (_hoverPortal == null || hovered.Id != _hoverPortal.Id) { _hoverPortal = hovered; _hoverSince = Time.unscaledTime; }
+                if (Time.unscaledTime - _hoverSince >= Plugin.HoverDelay.Value && _glowId != hovered.Id)
+                {
+                    if (!_saved) { _saved = true; _savedOffset = MapOffset(map); _savedZoom = map.LargeZoom; }
+                    _targetOffset = hovered.Position - player.transform.position;
+                    float worldSize = Mathf.Max(1f, map.m_textureSize * map.m_pixelSize);
+                    float regionZoom = Mathf.Clamp(Plugin.HoverZoomMeters.Value / worldSize, map.m_minZoom, map.m_maxZoom);
+                    _targetZoom = Mathf.Min(map.LargeZoom, regionZoom); // only zoom in, never out
+                    _moving = true; _returning = false;
+                    SetGlow(hovered.Id);
+                }
+            }
+            else
+            {
+                _hoverPortal = null;
+                if (_saved && !_returning)
+                {
+                    if (_leftListAt == 0f) _leftListAt = Time.unscaledTime;
+                    if (Time.unscaledTime - _leftListAt > 0.25f)
+                    {
+                        StopGlow();
+                        if (Plugin.HoverReturn.Value) { _targetOffset = _savedOffset; _targetZoom = _savedZoom; _moving = true; _returning = true; }
+                        else { _saved = false; _moving = false; }
+                    }
+                }
+            }
+
+            if (_moving)
+            {
+                float k = 1f - Mathf.Exp(-Time.unscaledDeltaTime * 10f); // ~0.3 s glide
+                Vector3 off = Vector3.Lerp(MapOffset(map), _targetOffset, k);
+                float zoom = Mathf.Lerp(map.LargeZoom, _targetZoom, k);
+                MapOffset(map) = off;
+                map.LargeZoom = zoom;
+                if ((off - _targetOffset).sqrMagnitude < 0.25f && Mathf.Abs(zoom - _targetZoom) < 0.0005f)
+                {
+                    MapOffset(map) = _targetOffset;
+                    map.LargeZoom = _targetZoom;
+                    _moving = false;
+                    if (_returning) { _returning = false; _saved = false; }
+                }
+            }
+        }
+
+        private static void SetGlow(ZDOID id)
+        {
+            StopGlow();
+            _glowId = id;
+            if (Pins.TryGetValue(id, out var pin) && pin != null) pin.m_animate = true;
+        }
+
+        private static void StopGlow()
+        {
+            if (_glowId != ZDOID.None && Pins.TryGetValue(_glowId, out var pin) && pin != null) pin.m_animate = false;
+            _glowId = ZDOID.None;
         }
 
         /// <summary>The portal this character last travelled from (if it still exists and is not the current one).</summary>
@@ -366,8 +497,10 @@ namespace Portaler
             {
                 var pin = Minimap.instance.AddPin(p.Position, Minimap.PinType.Icon4, p.DisplayName,
                     false, false, 0L, default(Splatform.PlatformUserID));
-                pin.m_icon = _pinSprite;
+                pin.m_icon = Art.PinSprite(p.Category);
+                pin.m_animate = p.Id == _glowId;
                 Pins[p.Id] = pin;
+                OurSprites.Add(pin.m_icon);
             }
         }
 
@@ -386,7 +519,7 @@ namespace Portaler
             var ours = new HashSet<Minimap.PinData>(Pins.Values);
             foreach (var pin in all)
             {
-                if (pin == null || ours.Contains(pin)) continue;
+                if (pin == null || ours.Contains(pin) || OurSprites.Contains(pin.m_icon)) continue;
                 if (pin.m_type == Minimap.PinType.Player || pin.m_type == Minimap.PinType.Death ||
                     pin.m_type == Minimap.PinType.Ping || pin.m_type == Minimap.PinType.Shout) continue;
                 foreach (var p in Portals)

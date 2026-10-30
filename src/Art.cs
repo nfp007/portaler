@@ -6,7 +6,6 @@ namespace Portaler
     /// <summary>Images used by the mod: the ring map pin (embedded PNG) and simple UI textures drawn in code.</summary>
     public static class Art
     {
-        private static Sprite _pin;
 
         /// <summary>
         /// Valheim renders in linear colour space; raw pixel values in our generated UI textures get brightened
@@ -20,34 +19,60 @@ namespace Portaler
             return l;
         }
 
-        /// <summary>Fiery portal ring for map pins, loaded from the embedded pin64.png.</summary>
-        public static Sprite PinSprite()
+        private static readonly System.Collections.Generic.Dictionary<int, Sprite> PinSprites = new System.Collections.Generic.Dictionary<int, Sprite>();
+        private static readonly System.Collections.Generic.Dictionary<int, Texture2D> CatIcons = new System.Collections.Generic.Dictionary<int, Texture2D>();
+
+        private static Texture2D LoadPng(string resource)
         {
-            if (_pin != null) return _pin;
-            Texture2D tex = null;
             try
             {
-                using (var s = typeof(Art).Assembly.GetManifestResourceStream("Portaler.pin64.png"))
+                using (var s = typeof(Art).Assembly.GetManifestResourceStream("Portaler." + resource))
                 {
-                    if (s != null)
-                    {
-                        var ms = new MemoryStream();
-                        s.CopyTo(ms);
-                        tex = new Texture2D(2, 2, TextureFormat.RGBA32, false);
-                        if (!ImageConversion.LoadImage(tex, ms.ToArray())) tex = null;
-                    }
+                    if (s == null) return null;
+                    var ms = new MemoryStream();
+                    s.CopyTo(ms);
+                    var tex = new Texture2D(2, 2, TextureFormat.RGBA32, false);
+                    if (!ImageConversion.LoadImage(tex, ms.ToArray())) return null;
+                    tex.filterMode = FilterMode.Bilinear;
+                    tex.wrapMode = TextureWrapMode.Clamp;
+                    return tex;
                 }
             }
             catch (System.Exception e)
             {
-                Plugin.Log.LogWarning("Could not load pin image: " + e.Message);
-                tex = null;
+                Plugin.Log.LogWarning($"Could not load {resource}: {e.Message}");
+                return null;
             }
-            if (tex == null) tex = FallbackRing(64);
-            tex.filterMode = FilterMode.Bilinear;
-            tex.wrapMode = TextureWrapMode.Clamp;
-            _pin = Sprite.Create(tex, new Rect(0, 0, tex.width, tex.height), new Vector2(0.5f, 0.5f));
-            return _pin;
+        }
+
+        /// <summary>Fiery portal ring for map pins, with a small category badge (0 = plain ring).</summary>
+        public static Sprite PinSprite(int category = 0)
+        {
+            category = Categories.Clamp(category);
+            if (PinSprites.TryGetValue(category, out var sp) && sp != null) return sp;
+            var tex = LoadPng($"pin_{Categories.Keys[category]}.png") ?? LoadPng("pin_none.png") ?? FallbackRing(64);
+            sp = Sprite.Create(tex, new Rect(0, 0, tex.width, tex.height), new Vector2(0.5f, 0.5f));
+            PinSprites[category] = sp;
+            return sp;
+        }
+
+        /// <summary>Category icon for the list (gold), colour-corrected like our other UI textures.</summary>
+        public static Texture2D CategoryIcon(int category)
+        {
+            category = Categories.Clamp(category);
+            if (category == 0) return null;
+            if (CatIcons.TryGetValue(category, out var t) && t != null) return t;
+            t = LoadPng($"cat_{Categories.Keys[category]}.png");
+            if (t != null && QualitySettings.activeColorSpace == ColorSpace.Linear)
+            {
+                var px = t.GetPixels();
+                for (int i = 0; i < px.Length; i++) px[i] = Px(px[i]);
+                t.SetPixels(px);
+                t.Apply();
+            }
+            if (t != null) t.hideFlags = HideFlags.HideAndDontSave;
+            CatIcons[category] = t;
+            return t;
         }
 
         private static Texture2D FallbackRing(int size)

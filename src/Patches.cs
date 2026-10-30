@@ -149,7 +149,7 @@ namespace Portaler
         {
             private static void Postfix(ref bool __result)
             {
-                if (PortalClient.Active && PortalUI.SearchFocused) __result = true;
+                if (PortalClient.Active && PortalUI.BlocksKeys) __result = true;
             }
         }
     }

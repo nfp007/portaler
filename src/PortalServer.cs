@@ -21,6 +21,8 @@ namespace Portaler
         public const string RpcRequestFavs = "Portaler_RequestFavs";
         public const string RpcToggleFav = "Portaler_ToggleFav";
         public const string RpcRename = "Portaler_Rename";
+        public const string RpcSetCategory = "Portaler_SetCategory";
+        public const string RpcSetFavOrder = "Portaler_SetFavOrder";
 
         private static bool _sentRestrictions;
         private static bool _lastRestrictions;
@@ -41,6 +43,10 @@ namespace Portaler
         private static readonly Dictionary<long, HashSet<string>> Favs = new Dictionary<long, HashSet<string>>();
         // Favorites shared with everybody.
         private static readonly HashSet<string> Shared = new HashSet<string>();
+        // Category per portal (shared, anyone can change it).
+        private static readonly Dictionary<string, int> Cats = new Dictionary<string, int>();
+        // Personal order of favorites per player (portal keys, first = top).
+        private static readonly Dictionary<long, List<string>> Order = new Dictionary<long, List<string>>();
         private static string _dataFile;
 
         // Runtime mapping between this session's ZDOIDs and the persistent position keys.
@@ -63,6 +69,8 @@ namespace Portaler
             ZRoutedRpc.instance.Register(RpcRequestFavs, new Action<long, long>(OnRequestFavs));
             ZRoutedRpc.instance.Register(RpcToggleFav, new Action<long, long, ZDOID>(OnToggleFav));
             ZRoutedRpc.instance.Register(RpcRename, new Action<long, ZDOID, string, string>(OnRename));
+            ZRoutedRpc.instance.Register(RpcSetCategory, new Action<long, ZDOID, int>(OnSetCategory));
+            ZRoutedRpc.instance.Register(RpcSetFavOrder, new Action<long, long, ZPackage>(OnSetFavOrder));
             _loaded = false;
             _sentRestrictions = false;
             _lastHash = "";
@@ -120,9 +128,12 @@ namespace Portaler
             if (key == null) return;
             // cycle: none -> personal -> shared -> none
             bool sharedChanged = true;
-            if (Shared.Contains(key)) { Shared.Remove(key); set.Remove(key); }
+            if (!Order.TryGetValue(playerId, out var order)) Order[playerId] = order = new List<string>();
+            if (Shared.Contains(key)) { Shared.Remove(key); set.Remove(key); order.Remove(key); }
             else if (set.Contains(key)) { set.Remove(key); Shared.Add(key); }
             else { set.Add(key); sharedChanged = false; }
+            // a new favorite goes to the end of this player's order
+            if (set.Contains(key) || Shared.Contains(key)) { if (!order.Contains(key)) order.Add(key); }
             Save();
             SendFavs(sender, playerId);
             if (sharedChanged) BroadcastShared();
@@ -162,6 +173,33 @@ namespace Portaler
             _nextScan = 0;
         }
 
+        private static void OnSetCategory(long sender, ZDOID id, int category)
+        {
+            if (!IsServer) return;
+            EnsureLoaded();
+            string key = KeyOf(id);
+            if (key == null) return;
+            category = Categories.Clamp(category);
+            if (category == 0) Cats.Remove(key); else Cats[key] = category;
+            Save();
+            _nextScan = 0; // the list (with categories) goes out on the next scan
+        }
+
+        private static void OnSetFavOrder(long sender, long playerId, ZPackage pkg)
+        {
+            if (!IsServer || playerId == 0) return;
+            EnsureLoaded();
+            var list = new List<string>();
+            int n = pkg.ReadInt();
+            for (int i = 0; i < n; i++)
+            {
+                string k = KeyOf(pkg.ReadZDOID());
+                if (k != null && !list.Contains(k)) list.Add(k);
+            }
+            Order[playerId] = list;
+            Save();
+        }
+
         private static void SendFavs(long target, long playerId)
         {
             var pkg = new ZPackage();
@@ -173,6 +211,11 @@ namespace Portaler
                     if (KeyToId.TryGetValue(k, out var id)) ids.Add(id);
             WriteIds(pkg, ids);
             WriteIds(pkg, SharedIds());
+            var orderIds = new List<ZDOID>();
+            if (Order.TryGetValue(playerId, out var ord))
+                foreach (var k in ord)
+                    if (KeyToId.TryGetValue(k, out var oid)) orderIds.Add(oid);
+            WriteIds(pkg, orderIds);
             ZRoutedRpc.instance.InvokeRoutedRPC(target, PortalClient.RpcFavs, pkg);
         }
 
@@ -266,6 +309,7 @@ namespace Portaler
                     Rotation = zdo.GetRotation(),
                     BiomeCode = Biomes.CodeAt(zdo.GetPosition()),
                     BuiltAt = built,
+                    Category = Cats.TryGetValue(key, out int cat) ? cat : 0,
                 });
                 SeedCounter(name);
             }
@@ -281,6 +325,9 @@ namespace Portaler
                 foreach (var set in Favs.Values)
                     if (set.RemoveWhere(k => !alive.Contains(k)) > 0) changed = true;
                 if (Shared.RemoveWhere(k => !alive.Contains(k)) > 0) { changed = true; BroadcastShared(); }
+                foreach (var k in Cats.Keys.Where(k => !alive.Contains(k)).ToList()) { Cats.Remove(k); changed = true; }
+                foreach (var o in Order.Values)
+                    if (o.RemoveAll(k => !alive.Contains(k)) > 0) changed = true;
                 if (changed) Save();
             }
 
@@ -323,7 +370,7 @@ namespace Portaler
             {
                 sb.Append(p.Id.UserID).Append(':').Append(p.Id.ID).Append('|').Append(p.Name).Append('|')
                   .Append(Mathf.RoundToInt(p.Position.x)).Append(',').Append(Mathf.RoundToInt(p.Position.z))
-                  .Append('|').Append(p.BuiltAt).Append(';');
+                  .Append('|').Append(p.BuiltAt).Append('|').Append(p.Category).Append(';');
             }
             return sb.ToString();
         }
@@ -343,6 +390,8 @@ namespace Portaler
             BuiltAt.Clear();
             Favs.Clear();
             Shared.Clear();
+            Cats.Clear();
+            Order.Clear();
             string world = ZNet.instance.GetWorldName() ?? "world";
             foreach (char c in Path.GetInvalidFileNameChars()) world = world.Replace(c, '_');
             _dataFile = DataFilePath(world);
@@ -359,6 +408,12 @@ namespace Portaler
             {
                 var parts = line.Split(' ');
                 if (parts.Length == 2 && parts[0] == "shared") { Shared.Add(parts[1]); continue; }
+                if (parts.Length == 3 && parts[0] == "cat" && int.TryParse(parts[2], out int cv)) { Cats[parts[1]] = Categories.Clamp(cv); continue; }
+                if (parts.Length == 3 && parts[0] == "order" && long.TryParse(parts[1], out long opid))
+                {
+                    Order[opid] = parts[2].Split(new[] { ',' }, StringSplitOptions.RemoveEmptyEntries).ToList();
+                    continue;
+                }
                 if (parts.Length != 3) continue;
                 if (parts[0] == "counter" && int.TryParse(parts[2], out int n)) Counters[parts[1]] = n;
                 else if (parts[1].Contains(":")) continue; // old ZDOID based entry, no longer valid
@@ -406,6 +461,9 @@ namespace Portaler
                 foreach (var kv in Favs)
                     foreach (var k in kv.Value) lines.Add($"fav {kv.Key} {k}");
                 foreach (var k in Shared) lines.Add($"shared {k}");
+                foreach (var kv in Cats) lines.Add($"cat {kv.Key} {kv.Value}");
+                foreach (var kv in Order)
+                    if (kv.Value.Count > 0) lines.Add($"order {kv.Key} {string.Join(",", kv.Value)}");
                 string tmp = _dataFile + ".tmp";
                 File.WriteAllLines(tmp, lines.ToArray());
                 if (File.Exists(_dataFile)) File.Delete(_dataFile);

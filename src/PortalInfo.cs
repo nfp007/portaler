@@ -13,6 +13,8 @@ namespace Portaler
         public string BiomeCode;
         /// <summary>Server time (ticks) when Portaler saw the portal being built; 0 = built before Portaler.</summary>
         public long BuiltAt;
+        /// <summary>Category number (see <see cref="Categories"/>), 0 = none.</summary>
+        public int Category;
 
         public string DisplayName => string.IsNullOrEmpty(Name) ? "(unnamed)" : Name;
 
@@ -27,6 +29,7 @@ namespace Portaler
                 pkg.Write(p.Rotation);
                 pkg.Write(p.BiomeCode ?? "");
                 pkg.Write(p.BuiltAt);
+                pkg.Write(p.Category);
             }
         }
 
@@ -44,6 +47,7 @@ namespace Portaler
                     Rotation = pkg.ReadQuaternion(),
                     BiomeCode = pkg.ReadString(),
                     BuiltAt = pkg.ReadLong(),
+                    Category = Categories.Clamp(pkg.ReadInt()),
                 });
             }
             return list;

@@ -11,3 +11,7 @@ lib/
 .vs/
 .vscode/
 *.user
+
+# python
+__pycache__/
+*.pyc

@@ -15,13 +15,18 @@ namespace Portaler
     {
         public const string Guid = "nfp007.Portaler";
         public const string Name = "Portaler";
-        public const string Version = "0.5.3";
+        public const string Version = "1.0.0";
 
         internal static Plugin Instance;
         internal static ManualLogSource Log;
 
         /// <summary>Server setting: use the game's own portal rules (item restrictions, world modifiers).</summary>
         internal static BepInEx.Configuration.ConfigEntry<bool> VanillaRestrictions;
+
+        // personal settings (each PC)
+        internal static BepInEx.Configuration.ConfigEntry<KeyCode> RenameKey, CategoryKey;
+        internal static BepInEx.Configuration.ConfigEntry<bool> HoverShowsMap, HoverReturn;
+        internal static BepInEx.Configuration.ConfigEntry<float> HoverDelay, HoverZoomMeters;
 
         private Harmony _harmony;
 
@@ -34,6 +39,14 @@ namespace Portaler
                 "true = the game's own rules: no metals/ores etc. through the wooden portal, and the world modifiers " +
                 "'no portals' / 'no portals during boss fights' apply.\n" +
                 "Only the server's (or the host's) value counts; it is sent to all players.");
+
+            RenameKey = Config.Bind("Controls", "RenameKey", KeyCode.E, "Hover a name in the list and press this key to rename the portal.");
+            CategoryKey = Config.Bind("Controls", "CategoryKey", KeyCode.T, "Hover a name in the list and press this key to choose the portal's category.");
+
+            HoverShowsMap = Config.Bind("Map", "HoverShowsMap", true, "Hovering a name in the list moves the map to that portal.");
+            HoverDelay = Config.Bind("Map", "HoverDelay", 0.4f, "Seconds the mouse must rest on a name before the map moves.");
+            HoverZoomMeters = Config.Bind("Map", "HoverZoomMeters", 1500f, "How much of the world the map shows around the portal (metres). The map only zooms in, never out.");
+            HoverReturn = Config.Bind("Map", "HoverReturn", true, "When the mouse leaves the list, the map glides back to where it was.");
             _harmony = new Harmony(Guid);
             _harmony.PatchAll(typeof(Plugin).Assembly);
             Log.LogInfo($"{Name} {Version} loaded");
