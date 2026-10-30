@@ -69,7 +69,7 @@ Every feature says what is **🌐 shared** (the same for everybody on the server
 
 **10. Map pins**
 - Every portal gets a fiery ring pin with its name, and its category icon in a round badge at the lower right.
-- The previewed portal's pin is drawn bigger and stays big; a pin under the mouse grows a little, so icon and name are easy to read.
+- The previewed portal's pin is drawn bigger and stays big as long as the fiery line is shown; a pin under the mouse grows a little, so icon and name are easy to read.
 - Pins from other mods (for example automatic pin mods) that sit on a portal are hidden, so each portal shows just one icon.
 - 🌐 Shared: everybody sees the same pins, names and icons.
 
@@ -118,7 +118,7 @@ Config file: `BepInEx/config/nfp007.Portaler.cfg` (created on first start). `[Se
 | `[Map] HoverReturn` | `true` | When the mouse leaves the list, the map glides back to where it was (not if you moved or zoomed the map yourself). |
 | `[Map] HoverReturnDelay` | `5` | Seconds the map stays on the previewed portal before gliding back. |
 | `[Map] HoverLine` | `true` | Draw the fiery line from your portal to the previewed one. |
-| `[Map] PinSizePreview` | `1.6` | Size of the previewed portal's pin (1 = normal). Stays until you preview another portal or close the list. |
+| `[Map] PinSizePreview` | `1.6` | Size of the previewed portal's pin (1 = normal), as long as the fiery line is shown. |
 | `[Map] PinSizeHover` | `1.3` | Size of a portal pin while the mouse is over it on the map. |
 | `[Server] VanillaRestrictions` | `false` | `false` = no restrictions, everything travels through every portal. `true` = the game's own rules: no metals/ores through the wooden portal, and the world modifiers "no portals" and "no portals during boss fights" apply. |
 

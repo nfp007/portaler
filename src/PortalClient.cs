@@ -271,7 +271,6 @@ namespace Portaler
             if (_saved && Minimap.instance != null) { MapOffset(Minimap.instance) = _savedOffset; Minimap.instance.LargeZoom = _savedZoom; }
             _saved = false; _moving = false; _returning = false;
             StopGlow();
-            _bigId = ZDOID.None;
             SourceId = ZDOID.None;
             _sourceTransform = null;
             if (closeMap && Minimap.instance != null && Minimap.instance.m_mode == Minimap.MapMode.Large)
@@ -316,12 +315,11 @@ namespace Portaler
         private static PortalInfo _hoverPortal;
         private static float _hoverSince, _leftListAt;
         private static ZDOID _glowId = ZDOID.None;
-        private static ZDOID _bigId = ZDOID.None;
         private static Canvas _mapCanvas;
         private static readonly Dictionary<Minimap.PinData, float> PinScale = new Dictionary<Minimap.PinData, float>();
 
         /// <summary>
-        /// Called after the map placed its pins each frame. Our pins have a steady size:
+        /// Called every frame (LateUpdate, after the map updated). Our pins have a steady size:
         /// the previewed portal is drawn big (and stays big), a pin under the mouse grows a little.
         /// The size changes smoothly instead of the vanilla pulsing.
         /// </summary>
@@ -342,7 +340,7 @@ namespace Portaler
                 float target = 1f;
                 if (large && Active)
                 {
-                    if (kv.Key == _bigId) target = Plugin.PinSizePreview.Value;
+                    if (kv.Key == _glowId) target = Plugin.PinSizePreview.Value;
                     else if (RectTransformUtility.RectangleContainsScreenPoint(pin.m_uiElement, mouse, cam)) target = Plugin.PinSizeHover.Value;
                 }
                 else if (large && RectTransformUtility.RectangleContainsScreenPoint(pin.m_uiElement, mouse, cam)) target = Plugin.PinSizeHover.Value;
@@ -437,8 +435,7 @@ namespace Portaler
         private static void SetGlow(ZDOID id)
         {
             StopGlow();
-            _glowId = id;
-            _bigId = id; // stays big on the map until another portal is previewed or the list closes
+            _glowId = id; // the previewed pin stays big as long as the fiery line is shown
         }
 
         private static void StopGlow()

@@ -18,14 +18,14 @@ def pin(key):
     im = Image.new('RGBA', (S, S), (0, 0, 0, 0))
     im.alpha_composite(ring, (0, 0))
     if key:
-        D = 36           # badge diameter (more than half the pin, readable at map size)
+        D = 43           # badge diameter (two thirds of the pin, readable at map size)
         big = 4          # supersample the badge circle
         b = Image.new('RGBA', (D * big, D * big), (0, 0, 0, 0))
         d = ImageDraw.Draw(b)
         d.ellipse([2 * big, 2 * big, (D - 2) * big, (D - 2) * big], fill=(30, 20, 12, 255), outline=(255, 200, 90, 255), width=3 * big)
         b = b.resize((D, D), Image.LANCZOS)
-        icon = draw(key, 24)
-        b.alpha_composite(icon, ((D - 24) // 2, (D - 24) // 2))
+        icon = draw(key, 29)
+        b.alpha_composite(icon, ((D - 29) // 2, (D - 29) // 2))
         im.alpha_composite(b, (S - D, S - D))
     return im
 

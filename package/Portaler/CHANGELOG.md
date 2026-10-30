@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.0.3
+- Category badge on the map pin 20% bigger.
+- Fixed: the previewed pin got small again right away. It now stays big as long as the fiery line is shown.
+- Pin sizes are applied every frame, so hovering a pin on the map reacts smoothly.
+
 ## 1.0.2
 - Category icon back in the lower right corner of the map pin, as a big round badge.
 - Steady pin sizes: no more pulsing. The previewed portal's pin is bigger and stays big; a pin under the mouse grows a little.
