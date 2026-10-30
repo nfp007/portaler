@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.0.2
+- Category icon back in the lower right corner of the map pin, as a big round badge.
+- Steady pin sizes: no more pulsing. The previewed portal's pin is bigger and stays big; a pin under the mouse grows a little.
+- New settings: `PinSizePreview`, `PinSizeHover`.
+
 ## 1.0.1
 - Category icon now sits big inside the portal ring on the map (was too small to see).
 - Map preview: a soft fiery line flows from your portal to the previewed one.

@@ -271,6 +271,7 @@ namespace Portaler
             if (_saved && Minimap.instance != null) { MapOffset(Minimap.instance) = _savedOffset; Minimap.instance.LargeZoom = _savedZoom; }
             _saved = false; _moving = false; _returning = false;
             StopGlow();
+            _bigId = ZDOID.None;
             SourceId = ZDOID.None;
             _sourceTransform = null;
             if (closeMap && Minimap.instance != null && Minimap.instance.m_mode == Minimap.MapMode.Large)
@@ -315,6 +316,48 @@ namespace Portaler
         private static PortalInfo _hoverPortal;
         private static float _hoverSince, _leftListAt;
         private static ZDOID _glowId = ZDOID.None;
+        private static ZDOID _bigId = ZDOID.None;
+        private static Canvas _mapCanvas;
+        private static readonly Dictionary<Minimap.PinData, float> PinScale = new Dictionary<Minimap.PinData, float>();
+
+        /// <summary>
+        /// Called after the map placed its pins each frame. Our pins have a steady size:
+        /// the previewed portal is drawn big (and stays big), a pin under the mouse grows a little.
+        /// The size changes smoothly instead of the vanilla pulsing.
+        /// </summary>
+        public static void ScalePins()
+        {
+            var map = Minimap.instance;
+            if (map == null) return;
+            bool large = map.m_mode == Minimap.MapMode.Large;
+            Vector2 mouse = ZInput.pointerPosition;
+            // the map's canvas may use a camera; hit tests need it
+            if (_mapCanvas == null && map.m_pinRootLarge != null) _mapCanvas = map.m_pinRootLarge.GetComponentInParent<Canvas>();
+            Camera cam = _mapCanvas != null && _mapCanvas.renderMode != RenderMode.ScreenSpaceOverlay ? _mapCanvas.worldCamera : null;
+            float k = 1f - Mathf.Exp(-Time.unscaledDeltaTime * 14f);
+            foreach (var kv in Pins)
+            {
+                var pin = kv.Value;
+                if (pin == null || pin.m_uiElement == null) continue;
+                float target = 1f;
+                if (large && Active)
+                {
+                    if (kv.Key == _bigId) target = Plugin.PinSizePreview.Value;
+                    else if (RectTransformUtility.RectangleContainsScreenPoint(pin.m_uiElement, mouse, cam)) target = Plugin.PinSizeHover.Value;
+                }
+                else if (large && RectTransformUtility.RectangleContainsScreenPoint(pin.m_uiElement, mouse, cam)) target = Plugin.PinSizeHover.Value;
+
+                PinScale.TryGetValue(pin, out float cur);
+                if (cur <= 0f) cur = 1f;
+                cur = Mathf.Lerp(cur, target, k);
+                if (Mathf.Abs(cur - target) < 0.005f) cur = target;
+                PinScale[pin] = cur;
+                pin.m_uiElement.localScale = new Vector3(cur, cur, 1f);
+                if (cur > 1.01f) pin.m_uiElement.SetAsLastSibling(); // big pins on top of their neighbours
+                var name = pin.m_NamePinData?.PinNameGameObject;
+                if (name != null) name.transform.localScale = new Vector3(cur, cur, 1f);
+            }
+        }
         private static bool _saved, _returning;
         private static Vector3 _savedOffset, _targetOffset;
         private static float _savedZoom, _targetZoom;
@@ -395,12 +438,11 @@ namespace Portaler
         {
             StopGlow();
             _glowId = id;
-            if (Pins.TryGetValue(id, out var pin) && pin != null) pin.m_animate = true;
+            _bigId = id; // stays big on the map until another portal is previewed or the list closes
         }
 
         private static void StopGlow()
         {
-            if (_glowId != ZDOID.None && Pins.TryGetValue(_glowId, out var pin) && pin != null) pin.m_animate = false;
             _glowId = ZDOID.None;
         }
 
@@ -508,6 +550,7 @@ namespace Portaler
 
             foreach (var pin in Pins.Values) Minimap.instance.RemovePin(pin);
             Pins.Clear();
+            PinScale.Clear();
 
             if (_pinSprite == null) _pinSprite = Art.PinSprite();
             foreach (var p in Portals)
@@ -515,7 +558,6 @@ namespace Portaler
                 var pin = Minimap.instance.AddPin(p.Position, Minimap.PinType.Icon4, p.DisplayName,
                     false, false, 0L, default(Splatform.PlatformUserID));
                 pin.m_icon = Art.PinSprite(p.Category);
-                pin.m_animate = p.Id == _glowId;
                 Pins[p.Id] = pin;
                 OurSprites.Add(pin.m_icon);
             }

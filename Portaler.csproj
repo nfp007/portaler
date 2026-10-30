@@ -8,7 +8,7 @@
     <RootNamespace>Portaler</RootNamespace>
     <LangVersion>9.0</LangVersion>
     <Nullable>disable</Nullable>
-    <Version>1.0.1</Version>
+    <Version>1.0.2</Version>
     <GenerateDocumentationFile>false</GenerateDocumentationFile>
     <AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>
     <!-- Offline build: use the game's own framework DLLs instead of NuGet reference packs -->
