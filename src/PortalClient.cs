@@ -286,7 +286,7 @@ namespace Portaler
                 _nextForeignScan = Time.time + 0.5f;
                 ReskinForeignPins();
             }
-            if (!Active) { _hoverPortal = null; _hoverSince = 0f; StopGlow(); _saved = false; return; }
+            if (!Active) { _hoverPortal = null; _hoverSince = 0f; StopGlow(); _saved = false; FlowLine.Hide(); return; }
 
             var player = Player.m_localPlayer;
             if (player == null || Minimap.instance == null) { Deactivate(false); return; }
@@ -320,12 +320,22 @@ namespace Portaler
         private static float _savedZoom, _targetZoom;
         private static bool _moving;
 
+        private static Vector3 _lastOffset;
+        private static float _lastZoom;
+
         private static void UpdateMapFocus()
         {
             var map = Minimap.instance;
-            if (!Plugin.HoverShowsMap.Value || map.m_mode != Minimap.MapMode.Large) return;
+            if (!Plugin.HoverShowsMap.Value || map.m_mode != Minimap.MapMode.Large) { FlowLine.Hide(); return; }
             var player = Player.m_localPlayer;
             var hovered = PortalUI.HoveredPortal;
+
+            // The player moved or zoomed the map himself (mouse is off the list): leave the view where it is.
+            if (_saved && hovered == null &&
+                ((MapOffset(map) - _lastOffset).sqrMagnitude > 1f || Mathf.Abs(map.LargeZoom - _lastZoom) > 0.0001f))
+            {
+                _saved = false; _moving = false; _returning = false;
+            }
 
             if (hovered != null)
             {
@@ -348,7 +358,8 @@ namespace Portaler
                 if (_saved && !_returning)
                 {
                     if (_leftListAt == 0f) _leftListAt = Time.unscaledTime;
-                    if (Time.unscaledTime - _leftListAt > 0.25f)
+                    // stay on the previewed portal for a while, then glide back
+                    if (Time.unscaledTime - _leftListAt > Plugin.HoverReturnDelay.Value)
                     {
                         StopGlow();
                         if (Plugin.HoverReturn.Value) { _targetOffset = _savedOffset; _targetZoom = _savedZoom; _moving = true; _returning = true; }
@@ -362,16 +373,22 @@ namespace Portaler
                 float k = 1f - Mathf.Exp(-Time.unscaledDeltaTime * 10f); // ~0.3 s glide
                 Vector3 off = Vector3.Lerp(MapOffset(map), _targetOffset, k);
                 float zoom = Mathf.Lerp(map.LargeZoom, _targetZoom, k);
-                MapOffset(map) = off;
-                map.LargeZoom = zoom;
                 if ((off - _targetOffset).sqrMagnitude < 0.25f && Mathf.Abs(zoom - _targetZoom) < 0.0005f)
                 {
-                    MapOffset(map) = _targetOffset;
-                    map.LargeZoom = _targetZoom;
+                    off = _targetOffset; zoom = _targetZoom;
                     _moving = false;
                     if (_returning) { _returning = false; _saved = false; }
                 }
+                MapOffset(map) = off;
+                map.LargeZoom = zoom;
             }
+            _lastOffset = MapOffset(map);
+            _lastZoom = map.LargeZoom;
+
+            // fiery line from the portal we stand in to the previewed one
+            var target = _glowId != ZDOID.None ? Portals.FirstOrDefault(p => p.Id == _glowId) : null;
+            if (target != null && target.Id != SourceId && Plugin.HoverLine.Value) FlowLine.Show(map, SourcePosition, target.Position);
+            else FlowLine.Hide();
         }
 
         private static void SetGlow(ZDOID id)

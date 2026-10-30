@@ -15,7 +15,7 @@ namespace Portaler
     {
         public const string Guid = "nfp007.Portaler";
         public const string Name = "Portaler";
-        public const string Version = "1.0.0";
+        public const string Version = "1.0.1";
 
         internal static Plugin Instance;
         internal static ManualLogSource Log;
@@ -25,8 +25,8 @@ namespace Portaler
 
         // personal settings (each PC)
         internal static BepInEx.Configuration.ConfigEntry<KeyCode> RenameKey, CategoryKey;
-        internal static BepInEx.Configuration.ConfigEntry<bool> HoverShowsMap, HoverReturn;
-        internal static BepInEx.Configuration.ConfigEntry<float> HoverDelay, HoverZoomMeters;
+        internal static BepInEx.Configuration.ConfigEntry<bool> HoverShowsMap, HoverReturn, HoverLine;
+        internal static BepInEx.Configuration.ConfigEntry<float> HoverDelay, HoverZoomMeters, HoverReturnDelay;
 
         private Harmony _harmony;
 
@@ -46,7 +46,9 @@ namespace Portaler
             HoverShowsMap = Config.Bind("Map", "HoverShowsMap", true, "Hovering a name in the list moves the map to that portal.");
             HoverDelay = Config.Bind("Map", "HoverDelay", 0.4f, "Seconds the mouse must rest on a name before the map moves.");
             HoverZoomMeters = Config.Bind("Map", "HoverZoomMeters", 1500f, "How much of the world the map shows around the portal (metres). The map only zooms in, never out.");
-            HoverReturn = Config.Bind("Map", "HoverReturn", true, "When the mouse leaves the list, the map glides back to where it was.");
+            HoverReturn = Config.Bind("Map", "HoverReturn", true, "When the mouse leaves the list, the map glides back to where it was (unless you move or zoom the map yourself).");
+            HoverReturnDelay = Config.Bind("Map", "HoverReturnDelay", 5f, "Seconds the map stays on the previewed portal after the mouse leaves the list.");
+            HoverLine = Config.Bind("Map", "HoverLine", true, "Draw a fiery line from the portal you stand in to the previewed portal.");
             _harmony = new Harmony(Guid);
             _harmony.PatchAll(typeof(Plugin).Assembly);
             Log.LogInfo($"{Name} {Version} loaded");

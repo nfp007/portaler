@@ -13,17 +13,21 @@ for key, _ in CATS:
     draw(key, 64).save(os.path.join(ART, f'cat_{key}.png'))
 
 def pin(key):
+    """Ring pin; with a category the icon sits big in the ring's open centre (readable on the map)."""
     S = 64  # same size as the plain ring, so pins keep their size on the map
     im = Image.new('RGBA', (S, S), (0, 0, 0, 0))
     im.alpha_composite(ring, (0, 0))
     if key:
-        big = 4  # supersample the badge
-        b = Image.new('RGBA', (30 * big, 30 * big), (0, 0, 0, 0))
-        d = ImageDraw.Draw(b)
-        d.ellipse([2 * big, 2 * big, 28 * big, 28 * big], fill=(30, 20, 12, 255), outline=(255, 200, 90, 255), width=3 * big)
-        b = b.resize((30, 30), Image.LANCZOS)
-        b.alpha_composite(draw(key, 18), (6, 6))
-        im.alpha_composite(b, (S - 30, S - 30))
+        size = 34
+        icon = draw(key, size)
+        # dark outline around the icon so it stands out on any map colour
+        a = icon.getchannel('A')
+        from PIL import ImageFilter
+        halo = Image.new('RGBA', (size, size), (20, 10, 4, 255))
+        halo.putalpha(a.filter(ImageFilter.MaxFilter(5)))
+        x = (S - size) // 2
+        im.alpha_composite(halo, (x, x))
+        im.alpha_composite(icon, (x, x))
     return im
 
 pin(None).save(os.path.join(ART, 'pin_none.png'))

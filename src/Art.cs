@@ -216,6 +216,30 @@ namespace Portaler
             return tex;
         }
 
+        private static Sprite _softDot;
+
+        /// <summary>White round dot with a soft edge (tinted per use), for the fiery map line.</summary>
+        public static Sprite SoftDot()
+        {
+            if (_softDot != null) return _softDot;
+            const int size = 32;
+            var tex = new Texture2D(size, size, TextureFormat.RGBA32, false);
+            float c = (size - 1) / 2f;
+            for (int y = 0; y < size; y++)
+                for (int x = 0; x < size; x++)
+                {
+                    float d = Mathf.Sqrt((x - c) * (x - c) + (y - c) * (y - c)) / (size / 2f);
+                    float a = Mathf.Clamp01(1f - d);
+                    tex.SetPixel(x, y, new Color(1f, 1f, 1f, a * a));
+                }
+            tex.Apply();
+            tex.filterMode = FilterMode.Bilinear;
+            tex.wrapMode = TextureWrapMode.Clamp;
+            tex.hideFlags = HideFlags.HideAndDontSave;
+            _softDot = Sprite.Create(tex, new Rect(0, 0, size, size), new Vector2(0.5f, 0.5f));
+            return _softDot;
+        }
+
         /// <summary>Left-pointing arrow ("back").</summary>
         public static Texture2D ArrowLeft(Color col, int size = 24)
         {

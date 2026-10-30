@@ -1,5 +1,12 @@
 # Changelog
 
+## 1.0.1
+- Category icon now sits big inside the portal ring on the map (was too small to see).
+- Map preview: a soft fiery line flows from your portal to the previewed one.
+- Map preview stays 5 seconds (was 0.25) before gliding back, and does not glide back at all if you move or zoom the map yourself.
+- New settings: `HoverReturnDelay`, `HoverLine`.
+- README: every feature says what is shared with everybody and what is personal.
+
 ## 1.0.0
 - First stable release.
 - Hover a name: the map glides to that portal and its pin glows (delay, zoom and return configurable).

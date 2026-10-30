@@ -14,55 +14,70 @@ Source code, issues and ideas: **[github.com/nfp007/portaler](https://github.com
 
 ## Features
 
+Every feature says what is **🌐 shared** (the same for everybody on the server) and what is **👤 personal** (only for you).
+
 **1. Travel from any portal to any portal**
 - Walk into a portal: the big map opens with the portal list on the left.
 - Click a name in the list, or a portal pin on the map, to travel.
-- **Hover a name** and the map glides to that portal and makes its pin glow, so you see where you're going.
 - Vanilla name pairing is switched off, so every portal is always active.
 - The portal you stand in stays in the list, marked in red with "you are here", and cannot be selected.
+- 🌐 Shared: the list of portals (everybody sees every portal).
 
-**2. Personal & shared favorites**
-- Right click a name: **mine** (silver star, only for this character), then **shared** (bigger glowing gold star, visible to the whole server), then off.
-- Favorites are listed on top. **Drag them by their handle** into your own order (per character). New favorites go to the end.
-- Anyone can add or remove a shared favorite. Everybody has the same rights.
+**2. Map preview**
+- Rest the mouse on a name: the map glides to that portal, its pin glows, and a soft fiery line flows from your portal to it.
+- The map stays there 5 seconds after the mouse leaves the list, then glides back. Move or zoom the map yourself and it stays where you put it.
+- 👤 Personal: only your own map moves. Timing, zoom and the line can be changed in your config.
 
-**3. Categories & filter**
-- Hover a name and press **T** to give the portal a category: Base, Mine, Farm, Trader, Boss, Danger, Dungeon or Explore.
-- The category icon shows in the list and as a badge on the map pin. Categories are the same for everyone.
+**3. Favorites**
+- Right click a name: **mine** (silver star), then **shared** (bigger glowing gold star), then off.
+- Drag favorites by their handle into any order. New favorites go to the end.
+- 🌐 Shared: gold stars. Everybody sees them, and anyone can add or remove them.
+- 👤 Personal: silver stars and the order of your favorites (per character, saved on the server).
+
+**4. Categories & filter**
+- Hover a name and press **T** to choose a category: Base, Mine, Farm, Trader, Boss, Danger, Dungeon or Explore.
+- The icon shows in the list and inside the portal's ring on the map.
 - One click on an icon in the **Show:** row lists only that category. Click it again (or **All**) to see everything.
+- 🌐 Shared: the category of each portal (anyone can change it).
+- 👤 Personal: which category you are filtering by.
 
-**4. Search**
+**5. Search**
 - Click the search box and type: only portals whose name contains the text are shown (any case), matching letters in gold.
 - While typing, the game ignores your keys (no walking, the map stays open). Esc or x clears the search.
+- 👤 Personal: your search (cleared each time you enter a portal).
 
-**5. Sorting & foldable groups**
+**6. Sorting & foldable groups**
 - **Biome** (default): grouped by biome, Deep North first. Click again for Meadows first.
 - **Name**: one list A to Z, or Z to A.
 - **Distance**: nearest first (or farthest first), with the distance shown next to each name.
 - Click a group title (a biome, Favorites, Last built) to fold or unfold it.
-- Sort choice and folded groups are remembered (folded groups per character).
+- 👤 Personal: sort choice (per PC) and folded groups (per character).
 
-**6. "Back to" and "Last built"**
-- **Back to**: the portal you last travelled from, at the top of the list. One click takes you back. Remembered per character.
-- **Last built**: the 3 newest portals built by anyone on the server.
+**7. "Back to"**
+- The portal you last travelled from, at the top of the list. One click takes you back.
+- 👤 Personal: per character, saved on your PC.
 
-**7. Automatic names & rename from the list**
-- New portals are named after their biome plus a number, for example `BF-007` or `MO-012`.
-- Numbers keep counting up per biome and are never reused.
+**8. "Last built"**
+- The 3 newest portals built by anyone on the server.
+- 🌐 Shared: the same list for everybody.
+
+**9. Automatic names & rename from the list**
+- New portals are named after their biome plus a number, for example `BF-007` or `MO-012`. Numbers keep counting up per biome and are never reused.
 - Portals you name yourself, and existing portals, keep their names.
 - Hover a name in the list and press **E** to rename that portal from anywhere in the world (up to 25 characters).
+- 🌐 Shared: portal names (anyone can rename any portal).
 
-**8. Map pins**
-- Every portal gets a fiery ring pin with its name on the map, with a small category badge.
+**10. Map pins**
+- Every portal gets a fiery ring pin with its name, and its category icon inside the ring.
 - Pins from other mods (for example automatic pin mods) that sit on a portal are hidden, so each portal shows just one icon.
+- 🌐 Shared: everybody sees the same pins, names and icons.
 
-**9. Server synced**
-- New, renamed and destroyed portals, categories and favorites show up for everybody within seconds.
-- Everything is stored on the server, next to the world save, and survives restarts and mod updates.
-
-**10. Optional vanilla restrictions**
+**11. Optional vanilla restrictions**
 - By default every item can travel, metals included.
 - Prefer the game's own rules? Switch on `VanillaRestrictions` on the server (see Configuration).
+- 🌐 Shared: the server decides for everybody.
+
+All shared data is stored on the server, next to the world save, and survives restarts and mod updates.
 
 <details>
 <summary><b>Controls</b> (click to show)</summary>
@@ -99,7 +114,9 @@ Config file: `BepInEx/config/nfp007.Portaler.cfg` (created on first start). `[Se
 | `[Map] HoverShowsMap` | `true` | Hovering a name moves the map to that portal. |
 | `[Map] HoverDelay` | `0.4` | Seconds the mouse must rest on a name before the map moves. |
 | `[Map] HoverZoomMeters` | `1500` | How much of the world is shown around the portal (metres). The map only zooms in, never out. |
-| `[Map] HoverReturn` | `true` | When the mouse leaves the list, the map glides back to where it was. |
+| `[Map] HoverReturn` | `true` | When the mouse leaves the list, the map glides back to where it was (not if you moved or zoomed the map yourself). |
+| `[Map] HoverReturnDelay` | `5` | Seconds the map stays on the previewed portal before gliding back. |
+| `[Map] HoverLine` | `true` | Draw the fiery line from your portal to the previewed one. |
 | `[Server] VanillaRestrictions` | `false` | `false` = no restrictions, everything travels through every portal. `true` = the game's own rules: no metals/ores through the wooden portal, and the world modifiers "no portals" and "no portals during boss fights" apply. |
 
 Everything else is set from inside the game:
