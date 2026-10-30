@@ -71,6 +71,7 @@ Every feature says what is **🌐 shared** (the same for everybody on the server
 - Every portal gets a fiery ring pin with its name, and its category icon in a round badge at the lower right.
 - The previewed portal's pin is drawn bigger and stays big as long as the fiery line is shown; a pin under the mouse grows a little, so icon and name are easy to read.
 - Pins from other mods (for example automatic pin mods) that sit on a portal are hidden, so each portal shows just one icon.
+- While you choose a destination, portal pins, their names and the fiery line are drawn above all other pins and labels, at full brightness.
 - 🌐 Shared: everybody sees the same pins, names and icons.
 
 **11. Optional vanilla restrictions**

@@ -97,7 +97,8 @@ namespace Portaler
                 }
             }
             _root.gameObject.SetActive(true);
-            _root.SetAsFirstSibling(); // behind the pins
+            _root.SetAsFirstSibling();
+            PortalClient.SetOnTop(_root.gameObject, 5); // above other mods' pins and labels, below our pins
         }
 
         public static void Hide()

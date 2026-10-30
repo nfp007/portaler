@@ -323,11 +323,43 @@ namespace Portaler
         /// the previewed portal is drawn big (and stays big), a pin under the mouse grows a little.
         /// The size changes smoothly instead of the vanilla pulsing.
         /// </summary>
+        /// <summary>
+        /// Draw a UI element above everything else on the map without moving it in the hierarchy
+        /// (the game rebuilds pins that are moved): a nested canvas with its own, higher sorting order.
+        /// order = 0 switches it back to normal drawing.
+        /// </summary>
+        public static void SetOnTop(GameObject go, int order)
+        {
+            if (go == null) return;
+            var c = go.GetComponent<Canvas>();
+            if (order <= 0)
+            {
+                if (c != null && c.overrideSorting) c.overrideSorting = false;
+                return;
+            }
+            if (c == null) c = go.AddComponent<Canvas>();
+            if (!c.overrideSorting) c.overrideSorting = true;
+            int baseOrder = MapSortingOrder();
+            if (c.sortingOrder != baseOrder + order) c.sortingOrder = baseOrder + order;
+            var root = _mapCanvas != null ? _mapCanvas.rootCanvas : null;
+            if (root != null && c.sortingLayerID != root.sortingLayerID) c.sortingLayerID = root.sortingLayerID;
+        }
+
+        private static int MapSortingOrder()
+        {
+            var map = Minimap.instance;
+            if (_mapCanvas == null && map != null && map.m_pinRootLarge != null) _mapCanvas = map.m_pinRootLarge.GetComponentInParent<Canvas>();
+            var root = _mapCanvas != null ? _mapCanvas.rootCanvas : null;
+            return root != null ? root.sortingOrder : 0;
+        }
+
         public static void ScalePins()
         {
             var map = Minimap.instance;
             if (map == null) return;
             bool large = map.m_mode == Minimap.MapMode.Large;
+            // while choosing a destination our pins are drawn above every other pin and label
+            bool lift = large && Active;
             Vector2 mouse = ZInput.pointerPosition;
             // the map's canvas may use a camera; hit tests need it
             if (_mapCanvas == null && map.m_pinRootLarge != null) _mapCanvas = map.m_pinRootLarge.GetComponentInParent<Canvas>();
@@ -351,9 +383,14 @@ namespace Portaler
                 if (Mathf.Abs(cur - target) < 0.005f) cur = target;
                 PinScale[pin] = cur;
                 pin.m_uiElement.localScale = new Vector3(cur, cur, 1f);
-                if (cur > 1.01f) pin.m_uiElement.SetAsLastSibling(); // big pins on top of their neighbours
                 var name = pin.m_NamePinData?.PinNameGameObject;
                 if (name != null) name.transform.localScale = new Vector3(cur, cur, 1f);
+
+                // order: fiery line 5, portal pins 10, previewed pin 12, names 11 / 13
+                bool big = kv.Key == _glowId;
+                SetOnTop(pin.m_uiElement.gameObject, lift ? (big ? 12 : 10) : 0);
+                if (name != null) SetOnTop(name, lift ? (big ? 13 : 11) : 0);
+                if (lift && pin.m_iconElement != null && pin.m_iconElement.color != Color.white) pin.m_iconElement.color = Color.white;
             }
         }
         private static bool _saved, _returning;

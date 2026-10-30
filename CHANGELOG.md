@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.0.4
+- While choosing a destination, portal pins, their names and the fiery line are drawn above all other pins and labels (they were covered by other mods' pins and names).
+- Portal pins always at full brightness.
+
 ## 1.0.3
 - Category badge on the map pin 20% bigger.
 - Fixed: the previewed pin got small again right away. It now stays big as long as the fiery line is shown.
