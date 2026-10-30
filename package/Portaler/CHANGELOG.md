@@ -1,5 +1,8 @@
 # Changelog
 
+## 1.0.5
+- New screenshots on the mod page: the map with the fiery line and big category badges, and the category filter.
+
 ## 1.0.4
 - While choosing a destination, portal pins, their names and the fiery line are drawn above all other pins and labels (they were covered by other mods' pins and names).
 - Portal pins always at full brightness.

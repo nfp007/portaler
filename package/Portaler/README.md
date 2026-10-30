@@ -8,7 +8,7 @@ Everything is synced through the server and kept with the world save, so it surv
 
 ![Portaler next to the map](https://raw.githubusercontent.com/nfp007/portaler/main/docs/overview.jpg)
 
-![Search, sorting by distance and by biome](https://raw.githubusercontent.com/nfp007/portaler/main/docs/screenshots.jpg)
+![Search, category filter, sorting by distance and by biome](https://raw.githubusercontent.com/nfp007/portaler/main/docs/screenshots.jpg)
 
 Source code, issues and ideas: **[github.com/nfp007/portaler](https://github.com/nfp007/portaler)**
 
