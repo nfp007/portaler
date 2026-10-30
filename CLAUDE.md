@@ -18,11 +18,11 @@ The same DLL runs on the dedicated server and on every client.
 ## Versioning and release (every change)
 1. Bump the version in **three** places: `src/Plugin.cs` (`Version`), `Portaler.csproj` (`<Version>`), `package/Portaler/manifest.json` (`version_number`).
 2. Add a `CHANGELOG.md` entry at the top (copy to `package/Portaler/CHANGELOG.md`). Keep `README.md` and `package/Portaler/README.md` identical.
-3. Two zips (contents of `package/Portaler/`, not the folder):
-   - `Portaler-<ver>.zip` – for Gale "Import local mod" (manifest **with** `"author": "nfp007"`).
-   - `Portaler-<ver>-thunderstore.zip` – for Thunderstore and Hexium (manifest **without** `author`).
+3. **One zip** per version: `Portaler-<ver>.zip` = contents of `package/Portaler/` (not the folder), manifest **without** `author`
+   (Thunderstore takes the author from the team). The same zip is used for Gale "Import local mod", Thunderstore and Hexium.
 4. Thunderstore/Hexium never accept the same version twice; versions not uploaded yet may be rewritten (ask first).
-5. Copy changed files to the user's PC folder `G:\Portaler` (zips into `G:\Portaler\package`, DLL into `G:\Portaler\build`).
+5. Copy changed files to the user's PC folder `G:\Valheim\Portaler`: source files, the zip into `package\`, the DLL into `build\`.
+   The `package\Portaler\` template folder is **not** copied to the PC (it only lives in the repo). `lib\` on the PC holds the build references.
 6. Commit as `nfp007 <nfp007@users.noreply.github.com>` and push to `github.com/nfp007/portaler` (`main`). Force push only when asked.
 7. Tell the user whether the **server** DLL must be updated too (anything touching `PortalServer`, RPCs or the list format).
 

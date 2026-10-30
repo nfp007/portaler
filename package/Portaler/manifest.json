@@ -1,6 +1,5 @@
 {
   "name": "Portaler",
-  "author": "nfp007",
   "version_number": "1.0.4",
   "website_url": "https://github.com/nfp007/portaler",
   "description": "Every portal connects to every portal. Pick your destination from a searchable, sortable list or the map, share favorites with the whole server, see the last built portals, auto-name them by biome, rename from the list and jump back with one click.",

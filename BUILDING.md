@@ -26,5 +26,5 @@ icon.png
 plugins/Portaler.dll
 ```
 
-Copy the new `Portaler.dll` into `plugins/`, raise `version_number` in `manifest.json` (and `Version` in `src/Plugin.cs` and `Portaler.csproj`), then zip the *contents* of `package/Portaler/` and upload it to Thunderstore / Hexium.
-Thunderstore does not want the `author` field in `manifest.json` (the team name is the author); Gale's "Import local mod" uses it.
+Copy the new `Portaler.dll` into `plugins/`, raise the version (`src/Plugin.cs`, `Portaler.csproj`, `manifest.json`), then zip the *contents* of `package/Portaler/` as `Portaler-<version>.zip`.
+The same zip works for Gale ("Import local mod"), Thunderstore and Hexium. `manifest.json` has no `author` field: on Thunderstore the team name is the author.
