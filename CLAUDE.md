@@ -28,7 +28,8 @@ The same DLL runs on the dedicated server and on every client.
 
 ## Design rules
 - UI matches Valheim: dark wood boards with light, uneven frames (`Art.Wood`), orange headers, gold accents.
-  Generated IMGUI textures must go through `Art.Px` (Valheim renders in linear colour space; otherwise colours look washed out).
+  Generated IMGUI textures show their pixel values exactly as written (measured in game) - `Art.Px` does no conversion.
+  Pick colours from real in-game screenshots of Valheim panels (palette at the top of `PortalUI.cs`).
 - **Mock-up first**: for new visual features draw a preview image (Python/PIL in the scratchpad) and get approval before implementing.
 - Equal rights: no admin-only features. Anyone may rename, set categories or change shared favorites.
 - Every feature in the README states what is **🌐 shared** (server, everybody) and what is **👤 personal** (per character / per PC).

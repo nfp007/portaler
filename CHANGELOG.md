@@ -1,5 +1,8 @@
 # Changelog
 
+## 1.0.6
+- Colours match Valheim's own panels: warm medium-brown wood instead of almost black. (A colour correction made everything far too dark; it is removed.)
+
 ## 1.0.5
 - New screenshots on the mod page: the map with the fiery line and big category badges, and the category filter.
 

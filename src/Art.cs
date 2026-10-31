@@ -8,16 +8,10 @@ namespace Portaler
     {
 
         /// <summary>
-        /// Valheim renders in linear colour space; raw pixel values in our generated UI textures get brightened
-        /// on screen. Convert so the colours look as designed.
+        /// Pixel colour for our generated UI textures. Measured in game: IMGUI shows the values exactly as written,
+        /// so no colour-space conversion (an earlier linear conversion made everything far too dark).
         /// </summary>
-        private static Color Px(Color c)
-        {
-            if (QualitySettings.activeColorSpace != ColorSpace.Linear) return c;
-            var l = c.linear;
-            l.a = c.a;
-            return l;
-        }
+        private static Color Px(Color c) => c;
 
         private static readonly System.Collections.Generic.Dictionary<int, Sprite> PinSprites = new System.Collections.Generic.Dictionary<int, Sprite>();
         private static readonly System.Collections.Generic.Dictionary<int, Texture2D> CatIcons = new System.Collections.Generic.Dictionary<int, Texture2D>();

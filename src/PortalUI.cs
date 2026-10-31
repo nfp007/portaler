@@ -67,19 +67,20 @@ namespace Portaler
         private static readonly Dictionary<string, Texture2D> RowTex = new Dictionary<string, Texture2D>();
 
         // Valheim-like colours
-        private static readonly Color PanelFill = new Color32(70, 48, 33, 255);
-        private static readonly Color PanelFrame = new Color32(150, 107, 68, 255);
-        private static readonly Color RowFill = new Color32(44, 30, 21, 255);
-        private static readonly Color RowFrame = new Color32(126, 90, 58, 255);
-        private static readonly Color HoverFill = new Color32(80, 55, 35, 255);
-        private static readonly Color HoverFrame = new Color32(160, 115, 70, 255);
-        private static readonly Color HereFrame = new Color32(196, 42, 26, 255);
-        private static readonly Color HereFill = new Color32(58, 26, 18, 255);
-        private static readonly Color CloseFill = new Color32(96, 60, 26, 255);
-        private static readonly Color CloseHoverFill = new Color32(130, 82, 34, 255);
-        private static readonly Color Orange = new Color32(255, 178, 64, 255);
-        private static readonly Color TextLight = new Color32(242, 230, 205, 255);
-        private static readonly Color HereText = new Color32(255, 150, 130, 255);
+        // Palette sampled from Valheim's own panels (crafting, inventory, Tag dialog)
+        private static readonly Color PanelFill = new Color32(104, 72, 49, 255);
+        private static readonly Color PanelFrame = new Color32(140, 112, 80, 255);
+        private static readonly Color RowFill = new Color32(80, 57, 41, 255);
+        private static readonly Color RowFrame = new Color32(122, 95, 68, 255);
+        private static readonly Color HoverFill = new Color32(112, 80, 54, 255);
+        private static readonly Color HoverFrame = new Color32(160, 125, 86, 255);
+        private static readonly Color HereFrame = new Color32(200, 60, 40, 255);
+        private static readonly Color HereFill = new Color32(110, 44, 30, 255);
+        private static readonly Color CloseFill = new Color32(150, 96, 44, 255);
+        private static readonly Color CloseHoverFill = new Color32(178, 116, 54, 255);
+        private static readonly Color Orange = new Color32(250, 170, 70, 255);
+        private static readonly Color TextLight = new Color32(250, 242, 225, 255);
+        private static readonly Color HereText = new Color32(255, 190, 170, 255);
 
         public static void OnOpened()
         {
@@ -699,12 +700,12 @@ namespace Portaler
                 case "close": fill = CloseFill; frame = RowFrame; break;
                 case "close-hover": fill = CloseHoverFill; frame = HoverFrame; break;
                 case "sort": fill = RowFill; frame = RowFrame; break;
-                case "search": fill = new Color32(30, 21, 15, 255); frame = RowFrame; break;
-                case "search-on": fill = new Color32(30, 21, 15, 255); frame = new Color32(205, 145, 60, 255); break;
-                case "back": fill = new Color32(42, 42, 30, 255); frame = new Color32(150, 135, 80, 255); break;
-                case "back-hover": fill = new Color32(66, 64, 40, 255); frame = new Color32(185, 168, 98, 255); break;
+                case "search": fill = new Color32(66, 48, 35, 255); frame = RowFrame; break;
+                case "search-on": fill = new Color32(66, 48, 35, 255); frame = new Color32(215, 160, 80, 255); break;
+                case "back": fill = new Color32(86, 78, 52, 255); frame = new Color32(160, 145, 95, 255); break;
+                case "back-hover": fill = new Color32(110, 100, 66, 255); frame = new Color32(190, 172, 112, 255); break;
                 case "sort-hover": fill = HoverFill; frame = HoverFrame; break;
-                case "picker": fill = new Color32(36, 24, 16, 255); frame = PanelFrame; break;
+                case "picker": fill = new Color32(96, 66, 45, 255); frame = PanelFrame; break;
                 case "sort-on": case "sort-on-hover": fill = CloseHoverFill; frame = HoverFrame; break;
             }
             tex = Art.Wood(w, h, 5f, fill, frame, 11 + v * 17, 1.6f);
@@ -722,7 +723,7 @@ namespace Portaler
             _title = new GUIStyle(GUI.skin.label) { fontSize = 26, fontStyle = FontStyle.Bold, alignment = TextAnchor.MiddleLeft };
             _title.normal.textColor = Orange;
             _hint = new GUIStyle(GUI.skin.label) { fontSize = 15, wordWrap = true };
-            _hint.normal.textColor = new Color32(210, 195, 170, 255);
+            _hint.normal.textColor = new Color32(235, 222, 200, 255);
             _header = new GUIStyle(GUI.skin.label) { fontSize = 19, fontStyle = FontStyle.Bold };
             _header.normal.textColor = Orange;
             _header.margin = new RectOffset(2, 2, 4, 2);
@@ -746,18 +747,18 @@ namespace Portaler
             _hereText = new GUIStyle(_rowText) { padding = new RectOffset(20 + (int)StarSize + (int)ArrowSize, 10, 0, 0) };
             _hereText.normal.textColor = HereText;
             _hereTag = new GUIStyle(_rowText) { fontSize = 13, fontStyle = FontStyle.Italic, alignment = TextAnchor.MiddleRight, padding = new RectOffset(0, 12, 0, 0) };
-            _hereTag.normal.textColor = new Color32(230, 120, 100, 255);
+            _hereTag.normal.textColor = new Color32(255, 160, 140, 255);
 
             _closeText = new GUIStyle(_rowText) { alignment = TextAnchor.MiddleCenter, padding = new RectOffset(8, 8, 0, 0) };
             _sortText = new GUIStyle(_closeText) { fontSize = 15, padding = new RectOffset(6, 6, 0, 0), margin = new RectOffset(2, 2, 0, 0) };
             _sortLabel = new GUIStyle(_hint) { fontSize = 15, alignment = TextAnchor.MiddleLeft, wordWrap = false };
             _distTag = new GUIStyle(_hereTag) { fontStyle = FontStyle.Normal, fontSize = 14 };
-            _distTag.normal.textColor = new Color32(205, 185, 150, 255);
+            _distTag.normal.textColor = new Color32(225, 208, 175, 255);
 
             _scrollbar = new GUIStyle(GUI.skin.verticalScrollbar) { fixedWidth = 12 };
-            _scrollbar.normal.background = Art.Box(new Color32(36, 24, 16, 255), new Color32(24, 15, 9, 255), new Color32(36, 24, 16, 255), 1);
+            _scrollbar.normal.background = Art.Box(new Color32(70, 50, 35, 255), new Color32(50, 35, 24, 255), new Color32(70, 50, 35, 255), 1);
             _scrollbar.border = new RectOffset(2, 2, 2, 2);
-            _thumb = Art.Box(new Color32(150, 107, 68, 255), new Color32(40, 26, 16, 255), new Color32(190, 140, 90, 255), 1);
+            _thumb = Art.Box(new Color32(160, 125, 86, 255), new Color32(60, 42, 28, 255), new Color32(200, 160, 110, 255), 1);
 
             if (font != null)
                 foreach (var s in new[] { _title, _hint, _header, _rowText, _hereText, _hereTag, _closeText, _sortText, _sortLabel, _distTag }) s.font = font;
@@ -767,8 +768,8 @@ namespace Portaler
             _starSilver = Art.SilverStar();
             _glow = Art.Glow();
             _arrow = Art.Arrow(new Color32(235, 60, 40, 255));
-            _foldClosed = Art.Arrow(new Color32(255, 178, 64, 255));
-            _foldOpen = Art.ArrowDown(new Color32(255, 178, 64, 255));
+            _foldClosed = Art.Arrow(new Color32(250, 170, 70, 255));
+            _foldOpen = Art.ArrowDown(new Color32(250, 170, 70, 255));
             _headerButton = new GUIStyle(_header) { padding = new RectOffset(18, 4, 2, 2) };
 
             _rowText.richText = true;
@@ -782,7 +783,7 @@ namespace Portaler
             _searchStyle.normal.textColor = _searchStyle.hover.textColor = _searchStyle.focused.textColor = _searchStyle.active.textColor = new Color32(255, 240, 210, 255);
             _searchStyle.font = _rowText.font;
             _placeholder = new GUIStyle(_hint) { fontStyle = FontStyle.Italic, alignment = TextAnchor.MiddleLeft, wordWrap = false };
-            _placeholder.normal.textColor = new Color32(150, 130, 105, 255);
+            _placeholder.normal.textColor = new Color32(190, 170, 140, 255);
             _clearStyle = new GUIStyle(_header) { alignment = TextAnchor.MiddleCenter, fontSize = 18 };
             _clearStyle.normal.textColor = new Color32(220, 170, 120, 255);
             _clearStyle.hover.textColor = Color.white;
