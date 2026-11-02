@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.0.9
+- "Back to" can be dragged too, and so can the whole portal list (new title "All portals"): any block can go above or below all portals.
+- While dragging, the lifted title says where it will land ("drop: before Favorites", "drop: at the end").
+
 ## 1.0.8
 - "You are here" is now greyed out instead of red; "Back to" is golden and the newest one glows.
 - "Back to" keeps your last 3 departure portals: **show 1 2 3** in its title chooses how many are listed.

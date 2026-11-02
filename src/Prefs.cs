@@ -60,7 +60,7 @@ namespace Portaler
         }
 
         // order of the movable groups, per character
-        public static readonly string[] DefaultGroupOrder = { "FAV", "TRIPS", "LAST" };
+        public static readonly string[] DefaultGroupOrder = { "BACK", "FAV", "TRIPS", "LAST", "PORTALS" };
         private static readonly System.Collections.Generic.Dictionary<string, System.Collections.Generic.List<string>> GroupOrders =
             new System.Collections.Generic.Dictionary<string, System.Collections.Generic.List<string>>();
 
@@ -69,7 +69,19 @@ namespace Portaler
             Load();
             var list = GroupOrders.TryGetValue(CharKey, out var o) ? new System.Collections.Generic.List<string>(o) : new System.Collections.Generic.List<string>();
             list.RemoveAll(k => Array.IndexOf(DefaultGroupOrder, k) < 0);
-            foreach (var k in DefaultGroupOrder) if (!list.Contains(k)) list.Add(k);
+            // groups missing from a saved order go to their default place (before the next default group that is there)
+            for (int i = 0; i < DefaultGroupOrder.Length; i++)
+            {
+                string k = DefaultGroupOrder[i];
+                if (list.Contains(k)) continue;
+                int at = list.Count;
+                for (int j = i + 1; j < DefaultGroupOrder.Length; j++)
+                {
+                    int found = list.IndexOf(DefaultGroupOrder[j]);
+                    if (found >= 0) { at = found; break; }
+                }
+                list.Insert(at, k);
+            }
             return list;
         }
 

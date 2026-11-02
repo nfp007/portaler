@@ -200,51 +200,14 @@ namespace Portaler
                     string what = searching && _catFilter > 0 ? $"\"{q}\" + {Categories.Names[_catFilter]}"
                                 : searching ? $"\"{q}\"" : Categories.Names[_catFilter];
                     GUILayout.Label($"{all.Count} of {everything.Count} portals match {what}", _distTagLeft);
+                    PortalsBlock(all, ref index, ref travel, ref toggle);
+                    if (all.Count == 0) GUILayout.Label("No portal matches.", _hint);
                 }
                 else
                 {
-                    var backs = PortalClient.BackPortals;
-                    if (backs.Count > 0) BackGroup(backs, ref index, ref travel, ref toggle);
-                    MovableGroups(favs, ref index, ref travel, ref toggle);
+                    // Back to, Favorites, Players' last trips, Last built and the portal list, in this character's order
+                    MovableGroups(favs, all, ref index, ref travel, ref toggle);
                 }
-
-                bool rev = Prefs.SortReversed;
-                var byName = System.StringComparer.OrdinalIgnoreCase;
-                switch (Prefs.SortMode)
-                {
-                    case "Name":
-                    {
-                        var list = rev ? all.OrderByDescending(p => p.DisplayName, byName).ToList()
-                                       : all.OrderBy(p => p.DisplayName, byName).ToList();
-                        Group("ALL", $"All portals  ({list.Count})", list, ref index, ref travel, ref toggle);
-                        break;
-                    }
-                    case "Distance":
-                    {
-                        Vector3 here = PortalClient.SourcePosition;
-                        var list = rev ? all.OrderByDescending(p => Utils.DistanceXZ(p.Position, here)).ToList()
-                                       : all.OrderBy(p => Utils.DistanceXZ(p.Position, here)).ToList();
-                        Group("ALL", $"All portals  ({list.Count})", list, ref index, ref travel, ref toggle);
-                        break;
-                    }
-                    default:
-                    {
-                        // Default: Deep North first ... Meadows last ("Other" always at the end). Reversed: Meadows first.
-                        var groups = all.GroupBy(p => p.BiomeCode)
-                            .OrderBy(g => g.Key == "XX" ? 1 : 0)
-                            .ThenBy(g => rev ? Biomes.SortIndex(g.Key) : -Biomes.SortIndex(g.Key));
-                        foreach (var g in groups)
-                        {
-                            var entry = Biomes.Order.FirstOrDefault(b => b.Code == g.Key);
-                            string title = string.IsNullOrEmpty(entry.Display) ? g.Key : entry.Display;
-                            Group(g.Key, $"{title}  ({g.Count()})", g.OrderBy(p => p.DisplayName, byName).ToList(),
-                                ref index, ref travel, ref toggle);
-                        }
-                        break;
-                    }
-                }
-                if (filtering && all.Count == 0) GUILayout.Label("No portal matches.", _hint);
-                else if (!filtering && all.Count <= 1) GUILayout.Label("No other portals yet.", _hint);
                 GUILayout.EndScrollView();
 
                 GUILayout.Space(8);
@@ -441,7 +404,7 @@ namespace Portaler
         /// <summary>"Back to": the last 1-3 portals this character travelled from. The newest one is golden and glows.</summary>
         private static void BackGroup(List<PortalInfo> backs, ref int index, ref PortalInfo travel, ref PortalInfo toggle)
         {
-            bool collapsed = GroupHeader("BACK", "Back to", false, CountSelectorWidth(Prefs.MaxBack), out _, out var right);
+            bool collapsed = GroupHeader("BACK", "Back to", true, CountSelectorWidth(Prefs.MaxBack), out var h, out var right);
             int n = CountSelector(right, Prefs.BackCount, Prefs.MaxBack);
             if (n != Prefs.BackCount) Prefs.BackCount = n;
             if (!collapsed)
@@ -460,15 +423,68 @@ namespace Portaler
                     Row(backs[i], index++, ref travel, ref toggle, false, opt);
                 }
             }
+            EndMovable("BACK", h);
             GUILayout.Space(collapsed ? 2 : 6);
         }
 
-        /// <summary>Favorites, Players' last trips and Last built, in this character's own order.</summary>
-        private static void MovableGroups(List<PortalInfo> favs, ref int index, ref PortalInfo travel, ref PortalInfo toggle)
+        /// <summary>
+        /// The portal list itself (biome groups, or one list when sorted by name or distance) under one movable title.
+        /// </summary>
+        private static void PortalsBlock(List<PortalInfo> all, ref int index, ref PortalInfo travel, ref PortalInfo toggle)
+        {
+            const string key = "PORTALS";
+            bool collapsed = GroupHeader(key, $"All portals  ({all.Count})", !_filtering, 0f, out var h, out _);
+            if (!collapsed)
+            {
+                bool rev = Prefs.SortReversed;
+                var byName = System.StringComparer.OrdinalIgnoreCase;
+                switch (Prefs.SortMode)
+                {
+                    case "Name":
+                    {
+                        var list = rev ? all.OrderByDescending(p => p.DisplayName, byName).ToList()
+                                       : all.OrderBy(p => p.DisplayName, byName).ToList();
+                        foreach (var p in list) Row(p, index++, ref travel, ref toggle);
+                        break;
+                    }
+                    case "Distance":
+                    {
+                        Vector3 here = PortalClient.SourcePosition;
+                        var list = rev ? all.OrderByDescending(p => Utils.DistanceXZ(p.Position, here)).ToList()
+                                       : all.OrderBy(p => Utils.DistanceXZ(p.Position, here)).ToList();
+                        foreach (var p in list) Row(p, index++, ref travel, ref toggle);
+                        break;
+                    }
+                    default:
+                    {
+                        // Default: Deep North first ... Meadows last ("Other" always at the end). Reversed: Meadows first.
+                        var groups = all.GroupBy(p => p.BiomeCode)
+                            .OrderBy(g => g.Key == "XX" ? 1 : 0)
+                            .ThenBy(g => rev ? Biomes.SortIndex(g.Key) : -Biomes.SortIndex(g.Key));
+                        foreach (var g in groups)
+                        {
+                            var entry = Biomes.Order.FirstOrDefault(b => b.Code == g.Key);
+                            string title = string.IsNullOrEmpty(entry.Display) ? g.Key : entry.Display;
+                            Group(g.Key, $"{title}  ({g.Count()})", g.OrderBy(p => p.DisplayName, byName).ToList(),
+                                ref index, ref travel, ref toggle, 14f);
+                        }
+                        break;
+                    }
+                }
+                if (!_filtering && all.Count <= 1) GUILayout.Label("No other portals yet.", _hint);
+            }
+            else index += all.Count;
+            EndMovable(key, h);
+            GUILayout.Space(collapsed ? 2 : 6);
+        }
+
+        /// <summary>Back to, Favorites, Players' last trips, Last built and All portals, in this character's own order.</summary>
+        private static void MovableGroups(List<PortalInfo> favs, List<PortalInfo> all, ref int index, ref PortalInfo travel, ref PortalInfo toggle)
         {
             var ev = Event.current;
             var order = Prefs.GetGroupOrder();
             var last = PortalClient.LastBuilt;
+            var backs = PortalClient.BackPortals;
             var known = PortalClient.KnownPlayers();
             if (ev.type == EventType.Repaint) GroupRects.Clear();
 
@@ -476,6 +492,8 @@ namespace Portaler
             {
                 switch (key)
                 {
+                    case "BACK": if (backs.Count > 0) BackGroup(backs, ref index, ref travel, ref toggle); break;
+                    case "PORTALS": PortalsBlock(all, ref index, ref travel, ref toggle); break;
                     case "FAV": if (favs.Count > 0) FavGroup(favs, ref index, ref travel, ref toggle); break;
                     case "TRIPS": if (known.Count > 0) TripsGroup(known, ref index, ref travel, ref toggle); break;
                     case "LAST": if (last.Count > 0) LastGroup(last, ref index, ref travel, ref toggle); break;
@@ -487,7 +505,7 @@ namespace Portaler
             if (ev.type == EventType.MouseDrag) ev.Use();
 
             var others = GroupRects.Where(kv => kv.Key != _dragGroup).ToList();
-            int drop = others.Count(kv => kv.Value.center.y < _groupDragY);
+            int drop = others.Count(kv => kv.Value.y + Mathf.Min(kv.Value.height / 2f, 60f) < _groupDragY);
 
             if (ev.type == EventType.Repaint && GroupRects.Count > 0)
             {
@@ -506,6 +524,9 @@ namespace Portaler
                 GUI.DrawTexture(new Rect(lifted.x + 24f, lifted.y + (lifted.height - 12f) / 2f, 12f, 12f), _foldOpen);
                 GroupTitles.TryGetValue(_dragGroup, out var t);
                 _headerButtonH.Draw(new Rect(lifted.x + 6f, lifted.y, lifted.width - 6f, lifted.height), new GUIContent(t ?? ""), false, false, false, false);
+                // where it lands, also when the drop line is scrolled out of sight
+                string where = drop < others.Count ? "before " + ShortTitle(others[drop].Key) : "at the end";
+                _distTag.Draw(lifted, new GUIContent("drop: " + where), false, false, false, false);
             }
 
             if (ev.rawType == EventType.MouseUp)
@@ -571,6 +592,18 @@ namespace Portaler
             GUILayout.Space(collapsed ? 2 : 6);
         }
 
+        private static string ShortTitle(string key)
+        {
+            switch (key)
+            {
+                case "BACK": return "Back to";
+                case "FAV": return "Favorites";
+                case "TRIPS": return "Players' last trips";
+                case "LAST": return "Last built";
+                default: return "All portals";
+            }
+        }
+
         private static string Ago(float seconds)
         {
             if (seconds < 60f) return "just now";
@@ -594,9 +627,11 @@ namespace Portaler
         }
 
         /// <summary>Plain group (biomes, all portals): clickable title folds/unfolds it.</summary>
-        private static void Group(string key, string title, List<PortalInfo> items, ref int index, ref PortalInfo travel, ref PortalInfo toggle)
+        private static void Group(string key, string title, List<PortalInfo> items, ref int index, ref PortalInfo travel, ref PortalInfo toggle, float indent = 0f)
         {
+            if (indent > 0f) { GUILayout.BeginHorizontal(); GUILayout.Space(indent); }
             bool collapsed = GroupHeader(key, title, false, 0f, out _, out _);
+            if (indent > 0f) GUILayout.EndHorizontal();
             if (!collapsed)
                 foreach (var p in items) Row(p, index++, ref travel, ref toggle);
             else

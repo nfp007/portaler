@@ -53,7 +53,7 @@ Every feature says what is **🌐 shared** (the same for everybody on the server
 - **Name**: one list A to Z, or Z to A.
 - **Distance**: nearest first (or farthest first), with the distance shown next to each name.
 - Click a group title to fold or unfold it.
-- Drag **Favorites**, **Players' last trips** and **Last built** by the handle left of their title to put them in any order. "Back to" stays on top, biomes below.
+- Every block has a handle left of its title: **Back to**, **Favorites**, **Players' last trips**, **Last built** and **All portals** (the biome groups, or the sorted list). Drag them into any order, for example put Last built below all portals.
 - 👤 Personal: sort choice (per PC), folded groups and group order (per character).
 
 **7. "Back to"**
@@ -109,7 +109,7 @@ All shared data is stored on the server, next to the world save, and survives re
 | Search | Click the search box, type part of a name; Esc or x clears it |
 | Go back | Click a row under "Back to" at the top of the list; **show 1 2 3** sets how many |
 | Follow other players | Click **Players: n of m** in "Players' last trips", tick names, **Done** |
-| Reorder groups | Drag Favorites, Players' last trips or Last built by the handle left of the title |
+| Reorder blocks | Drag Back to, Favorites, Players' last trips, Last built or All portals by the handle left of the title |
 | Fold / unfold a group | Click the group title |
 | Change sorting | Click **Biome**, **Name** or **Distance** at the top of the list |
 | Reverse sorting | Click the active sort button again |
