@@ -1,5 +1,8 @@
 # Changelog
 
+## 1.0.10
+- Updated mod description and README introduction to cover all current features.
+
 ## 1.0.9
 - "Back to" can be dragged too, and so can the whole portal list (new title "All portals"): any block can go above or below all portals.
 - While dragging, the lifted title says where it will land ("drop: before Favorites", "drop: at the end").

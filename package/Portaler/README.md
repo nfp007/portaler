@@ -2,9 +2,18 @@
 
 **Every portal connects to every portal.** Step into any portal and the map opens with a list of all portals on the server. Pick a name or click a pin and you're there. There's no pairing and no tag matching, and by default no item restrictions.
 
-Built for servers that play together: **favorites can be personal or shared with everyone**, the newest portals show up for all players, and new portals name themselves after their biome (`BF-007`, `MO-012`). Find any portal in seconds with **search, sorting and foldable biome groups**, rename portals right from the list, get home with **Back to**, and see where your friends went with **Players' last trips**.
+Rest the mouse on a name and the map shows where it goes, with a fiery line from your portal to the target.
 
-Everything is synced through the server and kept with the world save, so it survives restarts and mod updates.
+Built for servers that play together:
+- **Favorites**, personal (silver) or shared with everyone (gold), in your own order.
+- **Categories** with icons on the list and the map pins (base, mine, farm, trader, boss, danger, dungeon, explore), plus a one-click filter.
+- **Players' last trips**: see where your friends went and follow them with one click.
+- **Back to**: your last 1-3 departure portals, one click away.
+- **Last built**: the newest portals on the server.
+- **Search, sorting** (biome, name, distance), foldable groups and blocks you can drag into your own order.
+- **Automatic names** by biome (`BF-007`, `MO-012`) and renaming any portal right from the list.
+
+Everybody has the same rights: anyone can rename, set categories or change shared favorites. Everything shared is synced through the server and kept with the world save, so it survives restarts and mod updates.
 
 ![Portaler next to the map](https://raw.githubusercontent.com/nfp007/portaler/main/docs/overview.jpg)
 
