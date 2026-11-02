@@ -23,6 +23,7 @@ namespace Portaler
         public const string RpcRename = "Portaler_Rename";
         public const string RpcSetCategory = "Portaler_SetCategory";
         public const string RpcSetFavOrder = "Portaler_SetFavOrder";
+        public const string RpcTrip = "Portaler_Trip";
 
         private static bool _sentRestrictions;
         private static bool _lastRestrictions;
@@ -47,6 +48,9 @@ namespace Portaler
         private static readonly Dictionary<string, int> Cats = new Dictionary<string, int>();
         // Personal order of favorites per player (portal keys, first = top).
         private static readonly Dictionary<long, List<string>> Order = new Dictionary<long, List<string>>();
+        // Last portal each player travelled to (shared with everybody): player id -> trip.
+        private class Trip { public string Key; public long Time; public string Name; }
+        private static readonly Dictionary<long, Trip> Trips = new Dictionary<long, Trip>();
         private static string _dataFile;
 
         // Runtime mapping between this session's ZDOIDs and the persistent position keys.
@@ -71,6 +75,7 @@ namespace Portaler
             ZRoutedRpc.instance.Register(RpcRename, new Action<long, ZDOID, string, string>(OnRename));
             ZRoutedRpc.instance.Register(RpcSetCategory, new Action<long, ZDOID, int>(OnSetCategory));
             ZRoutedRpc.instance.Register(RpcSetFavOrder, new Action<long, long, ZPackage>(OnSetFavOrder));
+            ZRoutedRpc.instance.Register(RpcTrip, new Action<long, long, string, ZDOID>(OnTrip));
             _loaded = false;
             _sentRestrictions = false;
             _lastHash = "";
@@ -87,6 +92,7 @@ namespace Portaler
             EnsureLoaded();
             ProcessPending();
             Rebuild();
+            if (_tripsDirty) { _tripsDirty = false; SendTrips(ZRoutedRpc.Everybody); }
 
             // tell everybody when the restriction setting changes (e.g. edited in the config manager)
             bool r = Plugin.VanillaRestrictions.Value;
@@ -110,6 +116,39 @@ namespace Portaler
             Rebuild();
             Send(sender);
             SendSettings(sender);
+            SendTrips(sender);
+        }
+
+        /// <summary>A player went through a portal: remember where to, and tell everybody.</summary>
+        private static void OnTrip(long sender, long playerId, string name, ZDOID target)
+        {
+            if (!IsServer || playerId == 0) return;
+            EnsureLoaded();
+            string key = KeyOf(target);
+            if (key == null) return;
+            name = (name ?? "").Replace('\n', ' ').Trim();
+            if (name.Length > 40) name = name.Substring(0, 40);
+            Trips[playerId] = new Trip { Key = key, Time = DateTime.UtcNow.Ticks, Name = name };
+            Save();
+            SendTrips(ZRoutedRpc.Everybody);
+        }
+
+        // package: count, then per trip: player id, name, portal ZDOID, age in seconds
+        private static void SendTrips(long target)
+        {
+            if (KeyToId.Count == 0) Rebuild();
+            var pkg = new ZPackage();
+            var list = Trips.Where(kv => KeyToId.ContainsKey(kv.Value.Key)).ToList();
+            pkg.Write(list.Count);
+            long now = DateTime.UtcNow.Ticks;
+            foreach (var kv in list)
+            {
+                pkg.Write(kv.Key);
+                pkg.Write(kv.Value.Name ?? "");
+                pkg.Write(KeyToId[kv.Value.Key]);
+                pkg.Write(Math.Max(0L, (now - kv.Value.Time) / TimeSpan.TicksPerSecond));
+            }
+            ZRoutedRpc.instance.InvokeRoutedRPC(target, PortalClient.RpcTrips, pkg);
         }
 
         private static void OnRequestFavs(long sender, long playerId)
@@ -328,7 +367,10 @@ namespace Portaler
                 foreach (var k in Cats.Keys.Where(k => !alive.Contains(k)).ToList()) { Cats.Remove(k); changed = true; }
                 foreach (var o in Order.Values)
                     if (o.RemoveAll(k => !alive.Contains(k)) > 0) changed = true;
+                var lostTrips = Trips.Where(kv => !alive.Contains(kv.Value.Key)).Select(kv => kv.Key).ToList();
+                foreach (var pid in lostTrips) { Trips.Remove(pid); changed = true; }
                 if (changed) Save();
+                if (lostTrips.Count > 0) _tripsDirty = true;
             }
 
             string hash = Hash(list);
@@ -338,7 +380,11 @@ namespace Portaler
             _lastHash = hash;
             _current = list;
             Send(ZRoutedRpc.Everybody);
+            // portal ids may have changed (new list): trips refer to them
+            _tripsDirty = true;
         }
+
+        private static bool _tripsDirty;
 
         private static void Send(long target)
         {
@@ -392,6 +438,7 @@ namespace Portaler
             Shared.Clear();
             Cats.Clear();
             Order.Clear();
+            Trips.Clear();
             string world = ZNet.instance.GetWorldName() ?? "world";
             foreach (char c in Path.GetInvalidFileNameChars()) world = world.Replace(c, '_');
             _dataFile = DataFilePath(world);
@@ -407,6 +454,11 @@ namespace Portaler
             foreach (var line in File.ReadAllLines(source))
             {
                 var parts = line.Split(' ');
+                if (parts.Length >= 4 && parts[0] == "trip" && long.TryParse(parts[1], out long tpid) && long.TryParse(parts[3], out long tt))
+                {
+                    Trips[tpid] = new Trip { Key = parts[2], Time = tt, Name = string.Join(" ", parts.Skip(4).ToArray()) };
+                    continue;
+                }
                 if (parts.Length == 2 && parts[0] == "shared") { Shared.Add(parts[1]); continue; }
                 if (parts.Length == 3 && parts[0] == "cat" && int.TryParse(parts[2], out int cv)) { Cats[parts[1]] = Categories.Clamp(cv); continue; }
                 if (parts.Length == 3 && parts[0] == "order" && long.TryParse(parts[1], out long opid))
@@ -464,6 +516,7 @@ namespace Portaler
                 foreach (var kv in Cats) lines.Add($"cat {kv.Key} {kv.Value}");
                 foreach (var kv in Order)
                     if (kv.Value.Count > 0) lines.Add($"order {kv.Key} {string.Join(",", kv.Value)}");
+                foreach (var kv in Trips) lines.Add($"trip {kv.Key} {kv.Value.Key} {kv.Value.Time} {kv.Value.Name}");
                 string tmp = _dataFile + ".tmp";
                 File.WriteAllLines(tmp, lines.ToArray());
                 if (File.Exists(_dataFile)) File.Delete(_dataFile);

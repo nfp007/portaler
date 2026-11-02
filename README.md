@@ -2,7 +2,7 @@
 
 **Every portal connects to every portal.** Step into any portal and the map opens with a list of all portals on the server. Pick a name or click a pin and you're there. There's no pairing and no tag matching, and by default no item restrictions.
 
-Built for servers that play together: **favorites can be personal or shared with everyone**, the newest portals show up for all players, and new portals name themselves after their biome (`BF-007`, `MO-012`). Find any portal in seconds with **search, sorting and foldable biome groups**, rename portals right from the list, and get home with the **Back** button.
+Built for servers that play together: **favorites can be personal or shared with everyone**, the newest portals show up for all players, and new portals name themselves after their biome (`BF-007`, `MO-012`). Find any portal in seconds with **search, sorting and foldable biome groups**, rename portals right from the list, get home with **Back to**, and see where your friends went with **Players' last trips**.
 
 Everything is synced through the server and kept with the world save, so it survives restarts and mod updates.
 
@@ -20,7 +20,7 @@ Every feature says what is **🌐 shared** (the same for everybody on the server
 - Walk into a portal: the big map opens with the portal list on the left.
 - Click a name in the list, or a portal pin on the map, to travel.
 - Vanilla name pairing is switched off, so every portal is always active.
-- The portal you stand in stays in the list, marked in red with "you are here", and cannot be selected.
+- The portal you stand in stays in the list, greyed out with "you are here", and cannot be selected.
 - 🌐 Shared: the list of portals (everybody sees every portal).
 
 **2. Map preview**
@@ -52,31 +52,41 @@ Every feature says what is **🌐 shared** (the same for everybody on the server
 - **Biome** (default): grouped by biome, Deep North first. Click again for Meadows first.
 - **Name**: one list A to Z, or Z to A.
 - **Distance**: nearest first (or farthest first), with the distance shown next to each name.
-- Click a group title (a biome, Favorites, Last built) to fold or unfold it.
-- 👤 Personal: sort choice (per PC) and folded groups (per character).
+- Click a group title to fold or unfold it.
+- Drag **Favorites**, **Players' last trips** and **Last built** by the handle left of their title to put them in any order. "Back to" stays on top, biomes below.
+- 👤 Personal: sort choice (per PC), folded groups and group order (per character).
 
 **7. "Back to"**
-- The portal you last travelled from, at the top of the list. One click takes you back.
-- 👤 Personal: per character, saved on your PC.
+- The portals you last travelled from, at the top of the list. One click takes you back.
+- The newest one is golden and glows; older ones say "2 trips ago", "3 trips ago".
+- **show 1 2 3** in the title: how many to list.
+- 👤 Personal: the history per character, the number per PC.
 
 **8. "Last built"**
-- The 3 newest portals built by anyone on the server.
-- 🌐 Shared: the same list for everybody.
+- The newest portals built by anyone on the server.
+- **show 1 2 3 4 5** in the title: how many to list (default 3).
+- 🌐 Shared: the same list for everybody. 👤 Personal: how many you see (per PC).
 
-**9. Automatic names & rename from the list**
+**9. "Players' last trips"**
+- The last portal each other player travelled to, with their initial, name and how long ago. Click it to follow them.
+- **Players: 2 of 3** in the title opens a window: tick the players you want to follow (online or offline).
+- 🌐 Shared: every player's last trip (stored on the server).
+- 👤 Personal: whom you follow (per character, saved on your PC).
+
+**10. Automatic names & rename from the list**
 - New portals are named after their biome plus a number, for example `BF-007` or `MO-012`. Numbers keep counting up per biome and are never reused.
 - Portals you name yourself, and existing portals, keep their names.
 - Hover a name in the list and press **E** to rename that portal from anywhere in the world (up to 25 characters).
 - 🌐 Shared: portal names (anyone can rename any portal).
 
-**10. Map pins**
+**11. Map pins**
 - Every portal gets a fiery ring pin with its name, and its category icon in a round badge at the lower right.
 - The previewed portal's pin is drawn bigger and stays big as long as the fiery line is shown; a pin under the mouse grows a little, so icon and name are easy to read.
 - Pins from other mods (for example automatic pin mods) that sit on a portal are hidden, so each portal shows just one icon.
 - While you choose a destination, portal pins, their names and the fiery line are drawn above all other pins and labels, at full brightness.
 - 🌐 Shared: everybody sees the same pins, names and icons.
 
-**11. Optional vanilla restrictions**
+**12. Optional vanilla restrictions**
 - By default every item can travel, metals included.
 - Prefer the game's own rules? Switch on `VanillaRestrictions` on the server (see Configuration).
 - 🌐 Shared: the server decides for everybody.
@@ -97,8 +107,10 @@ All shared data is stored on the server, next to the world save, and survives re
 | Show one category | Click its icon in the **Show:** row; click again or **All** for everything |
 | Reorder favorites | Drag a favorite by its handle (the three lines on the left) |
 | Search | Click the search box, type part of a name; Esc or x clears it |
-| Go back | Click "Back to: ..." at the top of the list |
-| Fold / unfold a group | Click the group title (biome, Favorites, Last built) |
+| Go back | Click a row under "Back to" at the top of the list; **show 1 2 3** sets how many |
+| Follow other players | Click **Players: n of m** in "Players' last trips", tick names, **Done** |
+| Reorder groups | Drag Favorites, Players' last trips or Last built by the handle left of the title |
+| Fold / unfold a group | Click the group title |
 | Change sorting | Click **Biome**, **Name** or **Distance** at the top of the list |
 | Reverse sorting | Click the active sort button again |
 | Scroll the list | Mouse wheel over the list |
@@ -131,8 +143,8 @@ Everything else is set from inside the game:
 
 | What | Where it is stored |
 |---|---|
-| Sort choice (per PC), folded groups and "Back to" portal (per character) | `Portaler.prefs` in Valheim's data folder (`AppData\LocalLow\IronGate\Valheim`) |
-| Favorites and their order, categories, "Last built", name counters (per world) | `<world>.portaler.txt` next to the world save on the server |
+| Sort choice and list sizes (per PC); folded groups, group order, "Back to" history and followed players (per character) | `Portaler.prefs` in Valheim's data folder (`AppData\LocalLow\IronGate\Valheim`) |
+| Favorites and their order, categories, "Last built", players' last trips, name counters (per world) | `<world>.portaler.txt` next to the world save on the server |
 
 - Keep `<world>.portaler.txt` together with your world backups.
 - Deleting it resets favorites and "Last built". Numbering then continues from the highest existing portal number.

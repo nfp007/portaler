@@ -293,6 +293,80 @@ namespace Portaler
             return tex;
         }
 
+        /// <summary>Round badge for a player's initial: white disc (tinted per player) with a light rim.</summary>
+        public static Texture2D Disc(int size = 48)
+        {
+            var tex = new Texture2D(size, size, TextureFormat.RGBA32, false);
+            float c = (size - 1) / 2f, r = size / 2f - 1f;
+            for (int y = 0; y < size; y++)
+                for (int x = 0; x < size; x++)
+                {
+                    float d = Mathf.Sqrt((x - c) * (x - c) + (y - c) * (y - c));
+                    float a = Mathf.Clamp01(r - d + 0.5f);
+                    // rim: brighter ring at the edge, darker inside
+                    float rim = Mathf.Clamp01(1f - Mathf.Abs(d - (r - 2.5f)) / 2f);
+                    float v = Mathf.Lerp(0.78f, 1f, rim);
+                    tex.SetPixel(x, y, Px(new Color(v, v, v, a)));
+                }
+            tex.Apply();
+            tex.filterMode = FilterMode.Bilinear;
+            tex.hideFlags = HideFlags.HideAndDontSave;
+            return tex;
+        }
+
+        /// <summary>Check mark for the player selector.</summary>
+        public static Texture2D Check(Color col, int size = 32)
+        {
+            var tex = new Texture2D(size, size, TextureFormat.RGBA32, false);
+            // texture y goes up: short stroke down-right, long stroke up-right
+            Vector2 a = new Vector2(size * 0.18f, size * 0.52f), b = new Vector2(size * 0.42f, size * 0.24f), c = new Vector2(size * 0.84f, size * 0.80f);
+            float w = size * 0.09f;
+            for (int y = 0; y < size; y++)
+                for (int x = 0; x < size; x++)
+                {
+                    var p = new Vector2(x + 0.5f, y + 0.5f);
+                    float d = Mathf.Min(SegDist(p, a, b), SegDist(p, b, c)) - w;
+                    tex.SetPixel(x, y, Px(new Color(col.r, col.g, col.b, Mathf.Clamp01(0.5f - d))));
+                }
+            tex.Apply();
+            tex.filterMode = FilterMode.Bilinear;
+            tex.hideFlags = HideFlags.HideAndDontSave;
+            return tex;
+        }
+
+        private static float SegDist(Vector2 p, Vector2 a, Vector2 b)
+        {
+            Vector2 ab = b - a;
+            float t = Mathf.Clamp01(Vector2.Dot(p - a, ab) / ab.sqrMagnitude);
+            return Vector2.Distance(p, a + ab * t);
+        }
+
+        /// <summary>
+        /// Soft golden glow around a rectangle (drawn 9-sliced with a border of <paramref name="pad"/> pixels):
+        /// transparent in the middle, brightest at the rectangle's edge, fading outwards.
+        /// </summary>
+        public static Texture2D RectGlow(Color col, int pad = 12)
+        {
+            int size = pad * 2 + 4;
+            var tex = new Texture2D(size, size, TextureFormat.RGBA32, false);
+            for (int y = 0; y < size; y++)
+                for (int x = 0; x < size; x++)
+                {
+                    // distance outside the inner rectangle [pad, size-pad]
+                    float dx = Mathf.Max(pad - (x + 0.5f), (x + 0.5f) - (size - pad), 0f);
+                    float dy = Mathf.Max(pad - (y + 0.5f), (y + 0.5f) - (size - pad), 0f);
+                    float d = Mathf.Sqrt(dx * dx + dy * dy) / pad;
+                    bool inside = x + 0.5f > pad && x + 0.5f < size - pad && y + 0.5f > pad && y + 0.5f < size - pad;
+                    float a = inside ? 0f : Mathf.Clamp01(1f - d);
+                    tex.SetPixel(x, y, Px(new Color(col.r, col.g, col.b, a * a * col.a)));
+                }
+            tex.Apply();
+            tex.filterMode = FilterMode.Bilinear;
+            tex.wrapMode = TextureWrapMode.Clamp;
+            tex.hideFlags = HideFlags.HideAndDontSave;
+            return tex;
+        }
+
         /// <summary>Five-point star, filled (favorite) or just an outline (not favorite).</summary>
         public static Texture2D Star(bool filled, int size = 32) =>
             Star(filled, new Color(1f, 0.78f, 0.2f, 1f), new Color(1f, 0.95f, 0.6f, 1f), new Color(0.25f, 0.13f, 0.04f, 1f), size);

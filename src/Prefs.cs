@@ -1,11 +1,12 @@
 using System;
 using System.IO;
+using System.Linq;
 using UnityEngine;
 
 namespace Portaler
 {
     /// <summary>
-    /// Personal settings of this PC (list sorting). Stored in Valheim's own data folder
+    /// Personal settings of this PC (sorting, list sizes) and of each character (folded and ordered groups, "Back to" history, followed players). Stored in Valheim's own data folder
     /// (AppData\LocalLow\IronGate\Valheim\Portaler.prefs), so mod updates, reinstalls or
     /// a different Gale profile never reset them.
     /// </summary>
@@ -20,20 +21,80 @@ namespace Portaler
 
         private static string CharKey => Player.m_localPlayer != null ? Player.m_localPlayer.GetPlayerID().ToString() : "0";
 
-        // last portal each character came from ("Back to" row), stored as a position
-        private static readonly System.Collections.Generic.Dictionary<string, Vector3> Back =
-            new System.Collections.Generic.Dictionary<string, Vector3>();
+        // portals each character last came from ("Back to" rows), newest first, stored as positions
+        private static readonly System.Collections.Generic.Dictionary<string, System.Collections.Generic.List<Vector3>> Back =
+            new System.Collections.Generic.Dictionary<string, System.Collections.Generic.List<Vector3>>();
+        private const int BackKeep = 4; // one more than shown: the portal you stand in is never offered
 
-        public static Vector3? GetBack()
+        public static System.Collections.Generic.List<Vector3> GetBackList()
         {
             Load();
-            return Back.TryGetValue(CharKey, out var v) ? v : (Vector3?)null;
+            return Back.TryGetValue(CharKey, out var v) ? v : new System.Collections.Generic.List<Vector3>();
         }
 
-        public static void SetBack(Vector3 pos)
+        /// <summary>Remember the portal we leave from (newest first, no duplicates).</summary>
+        public static void PushBack(Vector3 pos)
         {
             Load();
-            Back[CharKey] = pos;
+            if (!Back.TryGetValue(CharKey, out var list)) Back[CharKey] = list = new System.Collections.Generic.List<Vector3>();
+            list.RemoveAll(v => Utils.DistanceXZ(v, pos) < 1.5f && Mathf.Abs(v.y - pos.y) < 3f);
+            list.Insert(0, pos);
+            if (list.Count > BackKeep) list.RemoveRange(BackKeep, list.Count - BackKeep);
+            Save();
+        }
+
+        // how many "Back to" and "Last built" rows to show (this PC)
+        private static int _backCount = 1, _lastBuiltCount = 3;
+        public const int MaxBack = 3, MaxLastBuilt = 5;
+
+        public static int BackCount
+        {
+            get { Load(); return _backCount; }
+            set { Load(); value = Mathf.Clamp(value, 1, MaxBack); if (_backCount != value) { _backCount = value; Save(); } }
+        }
+
+        public static int LastBuiltCount
+        {
+            get { Load(); return _lastBuiltCount; }
+            set { Load(); value = Mathf.Clamp(value, 1, MaxLastBuilt); if (_lastBuiltCount != value) { _lastBuiltCount = value; Save(); } }
+        }
+
+        // order of the movable groups, per character
+        public static readonly string[] DefaultGroupOrder = { "FAV", "TRIPS", "LAST" };
+        private static readonly System.Collections.Generic.Dictionary<string, System.Collections.Generic.List<string>> GroupOrders =
+            new System.Collections.Generic.Dictionary<string, System.Collections.Generic.List<string>>();
+
+        public static System.Collections.Generic.List<string> GetGroupOrder()
+        {
+            Load();
+            var list = GroupOrders.TryGetValue(CharKey, out var o) ? new System.Collections.Generic.List<string>(o) : new System.Collections.Generic.List<string>();
+            list.RemoveAll(k => Array.IndexOf(DefaultGroupOrder, k) < 0);
+            foreach (var k in DefaultGroupOrder) if (!list.Contains(k)) list.Add(k);
+            return list;
+        }
+
+        public static void SetGroupOrder(System.Collections.Generic.List<string> order)
+        {
+            Load();
+            GroupOrders[CharKey] = new System.Collections.Generic.List<string>(order);
+            Save();
+        }
+
+        // players whose trips this character follows (by name); not set = everybody
+        private static readonly System.Collections.Generic.Dictionary<string, System.Collections.Generic.HashSet<string>> Tracked =
+            new System.Collections.Generic.Dictionary<string, System.Collections.Generic.HashSet<string>>();
+
+        /// <summary>Followed player names, or null when this character never chose (= follow everybody).</summary>
+        public static System.Collections.Generic.HashSet<string> GetTracked()
+        {
+            Load();
+            return Tracked.TryGetValue(CharKey, out var set) ? set : null;
+        }
+
+        public static void SetTracked(System.Collections.Generic.IEnumerable<string> names)
+        {
+            Load();
+            Tracked[CharKey] = new System.Collections.Generic.HashSet<string>(names, StringComparer.OrdinalIgnoreCase);
             Save();
         }
 
@@ -78,15 +139,29 @@ namespace Portaler
                     string k = line.Substring(0, eq).Trim(), v = line.Substring(eq + 1).Trim();
                     if (k == "SortMode" && (v == "Biome" || v == "Name" || v == "Distance")) _mode = v;
                     else if (k == "SortReversed") _reversed = v == "true";
+                    else if (k == "BackCount" && int.TryParse(v, out int bc)) _backCount = Mathf.Clamp(bc, 1, MaxBack);
+                    else if (k == "LastBuiltCount" && int.TryParse(v, out int lc)) _lastBuiltCount = Mathf.Clamp(lc, 1, MaxLastBuilt);
                     else if (k.StartsWith("Back."))
                     {
-                        var c = v.Split(';');
+                        // newest first, "x;y;z|x;y;z|..." (older versions stored a single position)
+                        var list = new System.Collections.Generic.List<Vector3>();
                         var inv = System.Globalization.CultureInfo.InvariantCulture;
-                        if (c.Length == 3 && float.TryParse(c[0], System.Globalization.NumberStyles.Float, inv, out float x)
-                            && float.TryParse(c[1], System.Globalization.NumberStyles.Float, inv, out float y)
-                            && float.TryParse(c[2], System.Globalization.NumberStyles.Float, inv, out float z))
-                            Back[k.Substring(5)] = new Vector3(x, y, z);
+                        foreach (var item in v.Split('|'))
+                        {
+                            var c = item.Split(';');
+                            if (c.Length == 3 && float.TryParse(c[0], System.Globalization.NumberStyles.Float, inv, out float x)
+                                && float.TryParse(c[1], System.Globalization.NumberStyles.Float, inv, out float y)
+                                && float.TryParse(c[2], System.Globalization.NumberStyles.Float, inv, out float z))
+                                list.Add(new Vector3(x, y, z));
+                        }
+                        if (list.Count > 0) Back[k.Substring(5)] = list;
                     }
+                    else if (k.StartsWith("Groups."))
+                        GroupOrders[k.Substring(7)] = new System.Collections.Generic.List<string>(
+                            v.Split(new[] { ',' }, StringSplitOptions.RemoveEmptyEntries));
+                    else if (k.StartsWith("Track."))
+                        Tracked[k.Substring(6)] = new System.Collections.Generic.HashSet<string>(
+                            v.Split(new[] { '|' }, StringSplitOptions.RemoveEmptyEntries).Where(n => n != "-"), StringComparer.OrdinalIgnoreCase);
                     else if (k.StartsWith("Collapsed."))
                         Collapsed[k.Substring(10)] = new System.Collections.Generic.HashSet<string>(
                             v.Split(new[] { ',' }, StringSplitOptions.RemoveEmptyEntries));
@@ -104,12 +179,19 @@ namespace Portaler
                     "# Portaler personal settings",
                     "SortMode=" + _mode,
                     "SortReversed=" + (_reversed ? "true" : "false"),
+                    "BackCount=" + _backCount,
+                    "LastBuiltCount=" + _lastBuiltCount,
                 };
                 foreach (var kv in Collapsed)
                     if (kv.Value.Count > 0) lines.Add("Collapsed." + kv.Key + "=" + string.Join(",", kv.Value));
                 var ic = System.Globalization.CultureInfo.InvariantCulture;
                 foreach (var kv in Back)
-                    lines.Add("Back." + kv.Key + "=" + kv.Value.x.ToString("0.###", ic) + ";" + kv.Value.y.ToString("0.###", ic) + ";" + kv.Value.z.ToString("0.###", ic));
+                    if (kv.Value.Count > 0)
+                        lines.Add("Back." + kv.Key + "=" + string.Join("|", kv.Value.Select(p =>
+                            p.x.ToString("0.###", ic) + ";" + p.y.ToString("0.###", ic) + ";" + p.z.ToString("0.###", ic)).ToArray()));
+                foreach (var kv in GroupOrders) lines.Add("Groups." + kv.Key + "=" + string.Join(",", kv.Value.ToArray()));
+                // an empty choice is kept too ("-"): it means "nobody", not "everybody"
+                foreach (var kv in Tracked) lines.Add("Track." + kv.Key + "=" + (kv.Value.Count > 0 ? string.Join("|", kv.Value.ToArray()) : "-"));
                 File.WriteAllLines(FilePath, lines.ToArray());
             }
             catch (Exception e) { Plugin.Log.LogWarning("Could not save prefs: " + e.Message); }

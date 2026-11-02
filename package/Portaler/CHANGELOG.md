@@ -1,5 +1,13 @@
 # Changelog
 
+## 1.0.8
+- "You are here" is now greyed out instead of red; "Back to" is golden and the newest one glows.
+- "Back to" keeps your last 3 departure portals: **show 1 2 3** in its title chooses how many are listed.
+- "Last built": **show 1-5** in its title (default 3).
+- New group **Players' last trips**: the last portal each other player travelled to, shared through the server. **Players: n of m** opens a window to choose whom you follow (personal).
+- Favorites, Players' last trips and Last built can be dragged by the handle left of their title into any order (per character).
+- The server DLL must be updated too.
+
 ## 1.0.7
 - Map preview reworked: close portals (up to 2 km) are framed together with extra room around the target; far targets are shown directly instead of a fast flight across the map.
 - Calm glide (1 s, soft start and stop) to the preview and back.

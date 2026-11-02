@@ -6,9 +6,9 @@ namespace Portaler
 {
     /// <summary>
     /// The portal list shown on the left of the large map while choosing a destination.
-    /// Wooden Valheim-style board: Favorites, Last built, then every portal grouped by biome.
+    /// Wooden Valheim-style board: Back to, then Favorites / Players' last trips / Last built (movable), then every portal grouped by biome.
     /// Left click a name = travel, right click (or click the star) = favorite on/off.
-    /// The portal you stand in is shown with a red frame and an arrow, and cannot be chosen.
+    /// The portal you stand in is greyed out ("you are here") and cannot be chosen.
     /// </summary>
     public static class PortalUI
     {
@@ -25,7 +25,9 @@ namespace Portaler
         private const string SearchControl = "PortalerSearch";
         private static string _search = "";
         public static bool SearchFocused { get; private set; }
-        private static GUIStyle _searchStyle, _placeholder, _clearStyle, _backText, _backLabel;
+        private static GUIStyle _searchStyle, _placeholder, _clearStyle;
+        private static GUIStyle _headerButtonH, _smallText, _smallLabel, _avatarText, _playerName, _glowStyle;
+        private static Texture2D _disc, _check, _checkBox, _foldOpenLight;
         private static Texture2D _magnifier, _backIcon;
 
         private const int NameChars = 25;      // panel must fit names this long
@@ -41,7 +43,7 @@ namespace Portaler
         public static PortalInfo HoveredPortal { get; private set; }
 
         /// <summary>Game keys must be ignored (typing in the search box, category window open).</summary>
-        public static bool BlocksKeys => SearchFocused || _picker != null;
+        public static bool BlocksKeys => SearchFocused || _picker != null || _playersOpen;
 
         // category filter (0 = all) and category window
         private static int _catFilter;
@@ -77,13 +79,16 @@ namespace Portaler
         private static readonly Color RowFrame = new Color32(122, 95, 68, 255);
         private static readonly Color HoverFill = new Color32(112, 80, 54, 255);
         private static readonly Color HoverFrame = new Color32(160, 125, 86, 255);
-        private static readonly Color HereFrame = new Color32(200, 60, 40, 255);
-        private static readonly Color HereFill = new Color32(110, 44, 30, 255);
+        // "you are here": greyed out (you cannot travel there)
+        private static readonly Color HereFrame = new Color32(108, 100, 90, 255);
+        private static readonly Color HereFill = new Color32(74, 66, 58, 255);
         private static readonly Color CloseFill = new Color32(150, 96, 44, 255);
         private static readonly Color CloseHoverFill = new Color32(178, 116, 54, 255);
         private static readonly Color Orange = new Color32(250, 170, 70, 255);
         private static readonly Color TextLight = new Color32(250, 242, 225, 255);
-        private static readonly Color HereText = new Color32(255, 190, 170, 255);
+        private static readonly Color HereText = new Color32(158, 150, 138, 255);
+        // "Back to": golden, the newest one glows
+        private static readonly Color Gold = new Color32(255, 200, 90, 255);
 
         public static void OnOpened()
         {
@@ -92,6 +97,8 @@ namespace Portaler
             _wantUnfocus = true;
             _picker = null;
             _drag = null;
+            _dragGroup = null;
+            _playersOpen = false;
             HoveredPortal = null;
         }
 
@@ -104,6 +111,8 @@ namespace Portaler
                 HoveredPortal = null;
                 _picker = null;
                 _drag = null;
+                _dragGroup = null;
+                _playersOpen = false;
                 if (SearchFocused) { GUIUtility.keyboardControl = 0; SearchFocused = false; }
                 return;
             }
@@ -118,9 +127,10 @@ namespace Portaler
 
             // Category window: handled before the list so the list never sees these clicks.
             if (_picker != null) PickerInput(ev);
+            else if (_playersOpen) PlayersInput(ev);
 
             // A drag that lost its mouse-up (button released outside the game window) ends here.
-            if (_drag != null && ev.type == EventType.MouseMove) _drag = null;
+            if (ev.type == EventType.MouseMove) { _drag = null; _dragGroup = null; }
 
             // While the rename box is open, the list ignores the mouse (keys must stay untouched for the text box).
             bool typing = TextInput.IsVisible();
@@ -137,7 +147,7 @@ namespace Portaler
             if (SearchFocused && ev.type == EventType.MouseDown && !MouseOverList) GUIUtility.keyboardControl = 0;
 
             // Rename / category key over a name (the hovered row comes from the last repaint).
-            if (!typing && !SearchFocused && _picker == null && ev.type == EventType.KeyDown && _hovered != null && MouseOverList)
+            if (!typing && !SearchFocused && _picker == null && !_playersOpen && ev.type == EventType.KeyDown && _hovered != null && MouseOverList)
             {
                 if (ev.keyCode == Plugin.RenameKey.Value) PortalClient.BeginRename(_hovered); // opened on the next Update
                 else if (ev.keyCode == Plugin.CategoryKey.Value) { _picker = _hovered; ev.Use(); }
@@ -159,7 +169,7 @@ namespace Portaler
             {
                 GUILayout.BeginArea(new Rect(_rect.x + 22, _rect.y + 18, _rect.width - 44, _rect.height - 36));
                 GUILayout.Label("Portaler", _title);
-                GUILayout.Label($"Click a name or a map pin to travel. {Plugin.RenameKey.Value} = rename, {Plugin.CategoryKey.Value} = category.\nRight click = favorite. Drag a favorite by its handle to reorder.", _hint);
+                GUILayout.Label($"Click a name or a map pin to travel. {Plugin.RenameKey.Value} = rename, {Plugin.CategoryKey.Value} = category.\nRight click = favorite. Drag favorites and group titles by their handle.", _hint);
                 GUILayout.Space(6);
                 SortBar();
                 GUILayout.Space(6);
@@ -183,7 +193,6 @@ namespace Portaler
                 _forceOpen = filtering;
                 // favorites in this player's own order (drag and drop)
                 var favs = PortalClient.OrderedFavorites(all);
-                var last = PortalClient.LastBuilt;
                 int index = 0;
 
                 if (filtering)
@@ -194,10 +203,9 @@ namespace Portaler
                 }
                 else
                 {
-                    var back = PortalClient.BackPortal;
-                    if (back != null) { BackRow(back, ref travel, ref toggle); GUILayout.Space(6); }
-                    if (favs.Count > 0) FavGroup(favs, ref index, ref travel, ref toggle);
-                    if (last.Count > 0) Group("LAST", "Last built", last, ref index, ref travel, ref toggle);
+                    var backs = PortalClient.BackPortals;
+                    if (backs.Count > 0) BackGroup(backs, ref index, ref travel, ref toggle);
+                    MovableGroups(favs, ref index, ref travel, ref toggle);
                 }
 
                 bool rev = Prefs.SortReversed;
@@ -253,8 +261,9 @@ namespace Portaler
 
             if (ev.type == EventType.Repaint)
             {
-                HoveredPortal = MouseOverList && _drag == null && _picker == null ? _hovered : null;
+                HoveredPortal = MouseOverList && _drag == null && _dragGroup == null && _picker == null && !_playersOpen ? _hovered : null;
                 if (_picker != null) DrawPicker(ev);
+                if (_playersOpen) DrawPlayers(ev);
             }
 
             if (toggle != null) PortalClient.ToggleFavorite(toggle);
@@ -305,24 +314,6 @@ namespace Portaler
             return name.Substring(0, i) + "<color=#ffbe3c>" + name.Substring(i, _highlight.Length) + "</color>" + name.Substring(i + _highlight.Length);
         }
 
-        /// <summary>"Back to: ..." row: the portal this character last travelled from.</summary>
-        private static void BackRow(PortalInfo p, ref PortalInfo travel, ref PortalInfo toggle)
-        {
-            Rect r = GUILayoutUtility.GetRect(GUIContent.none, _backText, GUILayout.ExpandWidth(true), GUILayout.Height(RowHeight));
-            r.width -= 4;
-            var ev = Event.current;
-            if (ev.type == EventType.Repaint && r.Contains(ev.mousePosition)) _hovered = p;
-            if (ev.type == EventType.MouseDown && ev.button == 1 && r.Contains(ev.mousePosition)) { toggle = p; ev.Use(); }
-            // name drawn by the board itself (padding leaves room for icon + "Back to:"), label drawn separately
-            if (Board(r, p.DisplayName, _backText, "back", 0)) travel = p;
-            if (ev.type == EventType.Repaint)
-            {
-                GUI.DrawTexture(new Rect(r.x + 10, r.y + (r.height - 18f) / 2f, 18f, 18f), _backIcon);
-                _backLabel.Draw(new Rect(r.x + 36, r.y, 90, r.height), new GUIContent("Back to:"), false, false, false, false);
-                _hereTag.Draw(r, new GUIContent("previous portal"), false, false, false, false);
-            }
-        }
-
         /// <summary>Three sort buttons. Clicking the active one reverses the order.</summary>
         private static void SortBar()
         {
@@ -355,19 +346,257 @@ namespace Portaler
             return d < 1000f ? $"{Mathf.RoundToInt(d / 10f) * 10} m" : $"{d / 1000f:0.0} km";
         }
 
-        /// <summary>Group with a clickable header: click to fold/unfold (remembered per character, on this PC).</summary>
+        // ---------- groups ----------
+
+        /// <summary>Extra look of a row: board kind, a badge in the handle slot (back arrow, player initial) and a tag on the right.</summary>
+        private class RowOpt
+        {
+            public string Kind = "row";
+            public Texture2D Lead;
+            public Color LeadTint = Color.white;
+            public string LeadText;
+            public string Tag;
+            public float Inset;
+            public bool Glow;
+        }
+
+        // drag and drop of whole groups (Favorites, Players' last trips, Last built)
+        private static string _dragGroup;
+        private static float _groupDragY;
+        private static readonly List<KeyValuePair<string, Rect>> GroupRects = new List<KeyValuePair<string, Rect>>();
+        private static readonly Dictionary<string, string> GroupTitles = new Dictionary<string, string>();
+
+        /// <summary>
+        /// Group title: optional drag handle, fold arrow, title (click = fold/unfold, remembered per character)
+        /// and <paramref name="rightW"/> free pixels on the right for small controls. Returns true when folded.
+        /// </summary>
+        private static bool GroupHeader(string key, string title, bool movable, float rightW, out Rect h, out Rect right)
+        {
+            bool dragged = _dragGroup == key;
+            bool collapsed = dragged || (!_forceOpen && Prefs.IsCollapsed(key));
+            var style = movable ? _headerButtonH : _headerButton;
+            h = GUILayoutUtility.GetRect(new GUIContent(title), style, GUILayout.ExpandWidth(true));
+            right = new Rect(h.xMax - rightW - 6f, h.y, rightW, h.height);
+            var ev = Event.current;
+            var old = GUI.color;
+            if (dragged) GUI.color = new Color(1f, 1f, 1f, 0.35f);
+
+            float x = h.x;
+            if (movable)
+            {
+                var grip = new Rect(h.x, h.y, 18f, h.height);
+                if (ev.type == EventType.MouseDown && ev.button == 0 && _drag == null && grip.Contains(ev.mousePosition))
+                {
+                    _dragGroup = key;
+                    _groupDragY = ev.mousePosition.y;
+                    ev.Use();
+                }
+                if (ev.type == EventType.Repaint) DrawGrip(new Rect(h.x, h.y, 16f, h.height));
+                x += 18f;
+            }
+            if (ev.type == EventType.Repaint)
+                GUI.DrawTexture(new Rect(x + 2f, h.y + (h.height - 12f) / 2f, 12f, 12f), collapsed ? _foldClosed : _foldOpen);
+            var button = new Rect(h.x, h.y, Mathf.Max(40f, h.width - rightW - 8f), h.height);
+            if (GUI.Button(button, title, style) && !_forceOpen && !dragged) Prefs.SetCollapsed(key, !collapsed);
+            GUI.color = old;
+            if (movable) GroupTitles[key] = title;
+            return collapsed;
+        }
+
+        /// <summary>Three short bars: "grab here".</summary>
+        private static void DrawGrip(Rect r)
+        {
+            var old = GUI.color;
+            GUI.color = new Color(0.85f, 0.75f, 0.55f, old.a);
+            for (int i = 0; i < 3; i++)
+                GUI.DrawTexture(new Rect(r.x + 2f, r.y + r.height / 2f - 6f + i * 5f, 12f, 2f), Texture2D.whiteTexture);
+            GUI.color = old;
+        }
+
+        /// <summary>Remember where a movable group was drawn (for dropping a dragged group).</summary>
+        private static void EndMovable(string key, Rect h)
+        {
+            if (Event.current.type != EventType.Repaint) return;
+            float bottom = Mathf.Max(h.yMax, GUILayoutUtility.GetLastRect().yMax);
+            GroupRects.Add(new KeyValuePair<string, Rect>(key, new Rect(h.x, h.y, h.width, bottom - h.y)));
+        }
+
+        /// <summary>"show 1 2 3": small number buttons in a group title. Returns the chosen value.</summary>
+        private static int CountSelector(Rect right, int value, int max)
+        {
+            const float box = 22f, gap = 3f;
+            float x = right.xMax - max * (box + gap);
+            if (Event.current.type == EventType.Repaint)
+                _smallLabel.Draw(new Rect(x - 44f, right.y, 40f, right.height), new GUIContent("show"), false, false, false, false);
+            for (int i = 1; i <= max; i++)
+            {
+                var b = new Rect(x + (i - 1) * (box + gap), right.y + (right.height - box) / 2f, box, box);
+                if (Board(b, i.ToString(), _smallText, i == value ? "sort-on" : "sort", i)) value = i;
+            }
+            return value;
+        }
+
+        private static float CountSelectorWidth(int max) => 48f + max * 25f;
+
+        /// <summary>"Back to": the last 1-3 portals this character travelled from. The newest one is golden and glows.</summary>
+        private static void BackGroup(List<PortalInfo> backs, ref int index, ref PortalInfo travel, ref PortalInfo toggle)
+        {
+            bool collapsed = GroupHeader("BACK", "Back to", false, CountSelectorWidth(Prefs.MaxBack), out _, out var right);
+            int n = CountSelector(right, Prefs.BackCount, Prefs.MaxBack);
+            if (n != Prefs.BackCount) Prefs.BackCount = n;
+            if (!collapsed)
+            {
+                for (int i = 0; i < backs.Count; i++)
+                {
+                    var opt = new RowOpt
+                    {
+                        Kind = i == 0 ? "back" : "back2",
+                        Lead = _backIcon,
+                        LeadTint = i == 0 ? Color.white : new Color(1f, 1f, 1f, 0.7f),
+                        Tag = i == 0 ? "previous portal" : $"{i + 1} trips ago",
+                        Inset = 4f,
+                        Glow = i == 0,
+                    };
+                    Row(backs[i], index++, ref travel, ref toggle, false, opt);
+                }
+            }
+            GUILayout.Space(collapsed ? 2 : 6);
+        }
+
+        /// <summary>Favorites, Players' last trips and Last built, in this character's own order.</summary>
+        private static void MovableGroups(List<PortalInfo> favs, ref int index, ref PortalInfo travel, ref PortalInfo toggle)
+        {
+            var ev = Event.current;
+            var order = Prefs.GetGroupOrder();
+            var last = PortalClient.LastBuilt;
+            var known = PortalClient.KnownPlayers();
+            if (ev.type == EventType.Repaint) GroupRects.Clear();
+
+            foreach (var key in order)
+            {
+                switch (key)
+                {
+                    case "FAV": if (favs.Count > 0) FavGroup(favs, ref index, ref travel, ref toggle); break;
+                    case "TRIPS": if (known.Count > 0) TripsGroup(known, ref index, ref travel, ref toggle); break;
+                    case "LAST": if (last.Count > 0) LastGroup(last, ref index, ref travel, ref toggle); break;
+                }
+            }
+
+            if (_dragGroup == null) return;
+            if (ev.type == EventType.MouseDrag || ev.type == EventType.Repaint) _groupDragY = ev.mousePosition.y;
+            if (ev.type == EventType.MouseDrag) ev.Use();
+
+            var others = GroupRects.Where(kv => kv.Key != _dragGroup).ToList();
+            int drop = others.Count(kv => kv.Value.center.y < _groupDragY);
+
+            if (ev.type == EventType.Repaint && GroupRects.Count > 0)
+            {
+                var first = GroupRects[0].Value;
+                float lineY = others.Count == 0 ? first.y
+                            : drop < others.Count ? others[drop].Value.y - 2f
+                            : others[others.Count - 1].Value.yMax + 1f;
+                var old = GUI.color;
+                GUI.color = new Color(1f, 0.75f, 0.24f, 1f);
+                GUI.DrawTexture(new Rect(first.x, lineY - 1.5f, first.width - 4f, 3f), Texture2D.whiteTexture);
+                GUI.color = old;
+                // the lifted title follows the mouse
+                var lifted = new Rect(first.x + 12f, _groupDragY - 15f, first.width - 20f, 30f);
+                GUI.DrawTexture(lifted, RowTexture((int)lifted.width, (int)lifted.height, "row-hover", 1));
+                DrawGrip(new Rect(lifted.x + 4f, lifted.y, 16f, lifted.height));
+                GUI.DrawTexture(new Rect(lifted.x + 24f, lifted.y + (lifted.height - 12f) / 2f, 12f, 12f), _foldOpen);
+                GroupTitles.TryGetValue(_dragGroup, out var t);
+                _headerButtonH.Draw(new Rect(lifted.x + 6f, lifted.y, lifted.width - 6f, lifted.height), new GUIContent(t ?? ""), false, false, false, false);
+            }
+
+            if (ev.rawType == EventType.MouseUp)
+            {
+                var full = order.Where(k => k != _dragGroup).ToList();
+                int pos = drop < others.Count ? full.IndexOf(others[drop].Key)
+                        : others.Count > 0 ? full.IndexOf(others[others.Count - 1].Key) + 1 : 0;
+                full.Insert(Mathf.Clamp(pos, 0, full.Count), _dragGroup);
+                Prefs.SetGroupOrder(full);
+                _dragGroup = null;
+                ev.Use();
+            }
+        }
+
+        /// <summary>Other players' last trips: where each followed player last went through a portal.</summary>
+        private static void TripsGroup(List<KeyValuePair<string, bool>> known, ref int index, ref PortalInfo travel, ref PortalInfo toggle)
+        {
+            const string key = "TRIPS";
+            var trips = PortalClient.TrackedTrips();
+            int followed = known.Count(k => PortalClient.IsTracked(k.Key));
+            string btn = $"Players: {followed} of {known.Count}";
+            float bw = _smallText.CalcSize(new GUIContent(btn)).x + 34f;
+            bool collapsed = GroupHeader(key, "Players' last trips", true, bw, out var h, out var right);
+
+            var b = new Rect(right.x, right.y + (right.height - 24f) / 2f, right.width, 24f);
+            if (Board(b, btn + "     ", _smallText, "sort", 7)) _playersOpen = true;
+            if (Event.current.type == EventType.Repaint)
+                GUI.DrawTexture(new Rect(b.xMax - 18f, b.y + 7f, 10f, 10f), _foldOpenLight);
+
+            if (!collapsed)
+            {
+                if (followed == 0) GUILayout.Label("You follow nobody. Click \"Players\" to choose.", _placeholder);
+                else if (trips.Count == 0) GUILayout.Label("No trips yet.", _placeholder);
+                foreach (var kv in trips)
+                {
+                    string name = kv.Key.Name ?? "?";
+                    var opt = new RowOpt
+                    {
+                        Lead = _disc,
+                        LeadTint = PlayerColor(name),
+                        LeadText = name.Length > 0 ? name.Substring(0, 1).ToUpperInvariant() : "?",
+                        Tag = $"{name}, {Ago(kv.Key.AgeSeconds)}",
+                    };
+                    Row(kv.Value, index++, ref travel, ref toggle, false, opt);
+                }
+            }
+            EndMovable(key, h);
+            GUILayout.Space(collapsed ? 2 : 6);
+        }
+
+        /// <summary>"Last built" with "show 1-5" in its title.</summary>
+        private static void LastGroup(List<PortalInfo> last, ref int index, ref PortalInfo travel, ref PortalInfo toggle)
+        {
+            const string key = "LAST";
+            bool collapsed = GroupHeader(key, "Last built", true, CountSelectorWidth(Prefs.MaxLastBuilt), out var h, out var right);
+            int n = CountSelector(right, Prefs.LastBuiltCount, Prefs.MaxLastBuilt);
+            if (n != Prefs.LastBuiltCount) Prefs.LastBuiltCount = n;
+            if (!collapsed)
+                foreach (var p in last) Row(p, index++, ref travel, ref toggle);
+            else
+                index += last.Count;
+            EndMovable(key, h);
+            GUILayout.Space(collapsed ? 2 : 6);
+        }
+
+        private static string Ago(float seconds)
+        {
+            if (seconds < 60f) return "just now";
+            if (seconds < 3600f) return $"{Mathf.FloorToInt(seconds / 60f)} min ago";
+            if (seconds < 86400f) return $"{Mathf.FloorToInt(seconds / 3600f)} h ago";
+            return $"{Mathf.FloorToInt(seconds / 86400f)} d ago";
+        }
+
+        private static readonly Color32[] PlayerColors =
+        {
+            new Color32(150, 70, 150, 255), new Color32(60, 110, 175, 255), new Color32(70, 140, 80, 255), new Color32(175, 70, 60, 255),
+            new Color32(45, 140, 140, 255), new Color32(190, 120, 40, 255), new Color32(180, 85, 130, 255), new Color32(125, 125, 50, 255),
+        };
+
+        /// <summary>Same colour for the same name on every PC.</summary>
+        private static Color PlayerColor(string name)
+        {
+            int h = 0;
+            foreach (char c in (name ?? "").ToLowerInvariant()) h = h * 31 + c;
+            return PlayerColors[(h & 0x7fffffff) % PlayerColors.Length];
+        }
+
+        /// <summary>Plain group (biomes, all portals): clickable title folds/unfolds it.</summary>
         private static void Group(string key, string title, List<PortalInfo> items, ref int index, ref PortalInfo travel, ref PortalInfo toggle)
         {
-            bool collapsed = !_forceOpen && Prefs.IsCollapsed(key);
-            Rect h = GUILayoutUtility.GetRect(new GUIContent(title), _headerButton, GUILayout.ExpandWidth(true));
-            var ev = Event.current;
-            if (ev.type == EventType.Repaint)
-            {
-                var a = new Rect(h.x + 2, h.y + (h.height - 12f) / 2f, 12f, 12f);
-                GUI.DrawTexture(a, collapsed ? _foldClosed : _foldOpen);
-            }
-            if (GUI.Button(h, title, _headerButton) && !_forceOpen) Prefs.SetCollapsed(key, !collapsed);
-
+            bool collapsed = GroupHeader(key, title, false, 0f, out _, out _);
             if (!collapsed)
                 foreach (var p in items) Row(p, index++, ref travel, ref toggle);
             else
@@ -378,15 +607,10 @@ namespace Portaler
         /// <summary>Favorites group: like any group, but rows have a handle to drag them into a new order.</summary>
         private static void FavGroup(List<PortalInfo> items, ref int index, ref PortalInfo travel, ref PortalInfo toggle)
         {
-            string key = "FAV";
-            string title = $"Favorites  ({items.Count})";
-            bool collapsed = !_forceOpen && Prefs.IsCollapsed(key);
-            Rect h = GUILayoutUtility.GetRect(new GUIContent(title), _headerButton, GUILayout.ExpandWidth(true));
+            const string key = "FAV";
+            bool collapsed = GroupHeader(key, $"Favorites  ({items.Count})", true, 0f, out var h, out _);
             var ev = Event.current;
-            if (ev.type == EventType.Repaint)
-                GUI.DrawTexture(new Rect(h.x + 2, h.y + (h.height - 12f) / 2f, 12f, 12f), collapsed ? _foldClosed : _foldOpen);
-            if (GUI.Button(h, title, _headerButton) && !_forceOpen) Prefs.SetCollapsed(key, !collapsed);
-            if (collapsed) { index += items.Count; GUILayout.Space(2); return; }
+            if (collapsed) { index += items.Count; EndMovable(key, h); GUILayout.Space(2); return; }
 
             if (ev.type == EventType.Repaint) FavRects.Clear();
             foreach (var p in items) Row(p, index++, ref travel, ref toggle, true);
@@ -412,7 +636,7 @@ namespace Portaler
                     GUI.color = old;
                     // the lifted row follows the mouse
                     var lifted = new Rect(first.x + 12f, _dragMouseY - RowHeight / 2f, first.width - 12f, RowHeight);
-                    DrawRowVisual(lifted, _drag, "row-hover", 1, true);
+                    DrawRowVisual(lifted, _drag, "row-hover", 1, true, null);
                 }
 
                 if (ev.rawType == EventType.MouseUp)
@@ -424,36 +648,39 @@ namespace Portaler
                     ev.Use();
                 }
             }
+            EndMovable(key, h);
             GUILayout.Space(6);
         }
 
-        private static void Row(PortalInfo p, int index, ref PortalInfo travel, ref PortalInfo toggle, bool favRow = false)
+        private static void Row(PortalInfo p, int index, ref PortalInfo travel, ref PortalInfo toggle, bool favRow = false, RowOpt opt = null)
         {
             Rect r = GUILayoutUtility.GetRect(GUIContent.none, _rowText, GUILayout.ExpandWidth(true), GUILayout.Height(RowHeight));
             r.width -= 4; // gap to the scrollbar
+            if (opt != null && opt.Inset > 0f) { r.x += opt.Inset; r.width -= opt.Inset * 2f; }
             var ev = Event.current;
             bool here = p.Id == PortalClient.SourceId;
             bool handle = favRow && !_filtering;
+            bool slot = handle || opt?.Lead != null;
             if (favRow && ev.type == EventType.Repaint) FavRects.Add(new KeyValuePair<PortalInfo, Rect>(p, r));
             if (ev.type == EventType.Repaint && r.Contains(ev.mousePosition)) _hovered = p;
 
-            float x = r.x + 8f + (handle ? HandleW : 0f);
+            float x = r.x + 8f + (slot ? HandleW : 0f);
             Rect star = new Rect(x, r.y + (r.height - StarSize) / 2f, StarSize, StarSize);
 
             // this row is being dragged: show only a faint ghost in its old place
-            if (_drag != null && _drag.Id == p.Id)
+            if (_drag != null && _drag.Id == p.Id && favRow)
             {
                 if (ev.type == EventType.Repaint)
                 {
                     var old = GUI.color; GUI.color = new Color(1f, 1f, 1f, 0.3f);
-                    DrawRowVisual(r, p, here ? "here" : "row", index, handle);
+                    DrawRowVisual(r, p, here ? "here" : "row", index, handle, opt);
                     GUI.color = old;
                 }
                 return;
             }
 
             // grab the handle to start dragging
-            if (handle && ev.type == EventType.MouseDown && ev.button == 0 &&
+            if (handle && _dragGroup == null && ev.type == EventType.MouseDown && ev.button == 0 &&
                 new Rect(r.x, r.y, 8f + HandleW, r.height).Contains(ev.mousePosition))
             {
                 _drag = p;
@@ -472,80 +699,188 @@ namespace Portaler
 
             if (here)
             {
-                if (ev.type == EventType.Repaint) DrawRowVisual(r, p, "here", index, handle);
+                if (ev.type == EventType.Repaint) DrawRowVisual(r, p, "here", index, handle, opt);
                 // swallow left clicks: you cannot travel to the portal you are standing in
                 if (ev.type == EventType.MouseDown && ev.button == 0 && r.Contains(ev.mousePosition)) ev.Use();
             }
             else
             {
-                if (Board(r, Highlight(p.DisplayName), RowStyle(p, handle), "row", index)) travel = p;
+                if (opt != null && opt.Glow && ev.type == EventType.Repaint) DrawGlow(r);
+                if (Board(r, Highlight(p.DisplayName), RowStyle(p, slot), opt?.Kind ?? "row", index)) travel = p;
                 if (ev.type == EventType.Repaint)
                 {
-                    DrawRowDecor(r, p, handle, false);
-                    if (Prefs.SortMode == "Distance")
+                    DrawRowDecor(r, p, handle, false, opt);
+                    if (opt?.Tag != null)
+                        _distTag.Draw(r, new GUIContent(opt.Tag), false, false, false, false);
+                    else if (Prefs.SortMode == "Distance")
                         _distTag.Draw(r, new GUIContent(DistanceText(p)), false, false, false, false);
                 }
             }
         }
 
-        /// <summary>Left offset of the name: handle, star, category icon (and arrow for "you are here").</summary>
-        private static int TextLeft(PortalInfo p, bool handle, bool here)
+        /// <summary>Soft, slowly breathing golden glow around the newest "Back to" row.</summary>
+        private static void DrawGlow(Rect r)
         {
-            float left = 8f + (handle ? HandleW : 0f) + StarSize + 8f;
+            float pulse = 0.5f + 0.5f * Mathf.Sin(Time.realtimeSinceStartup * 2f);
+            var old = GUI.color;
+            GUI.color = new Color(1f, 1f, 1f, (0.65f + 0.35f * pulse) * old.a);
+            const float g = 8f;
+            _glowStyle.Draw(new Rect(r.x - g, r.y - g, r.width + 2f * g, r.height + 2f * g), GUIContent.none, false, false, false, false);
+            GUI.color = old;
+        }
+
+        /// <summary>Left offset of the name: handle or badge, star, category icon.</summary>
+        private static int TextLeft(PortalInfo p, bool slot)
+        {
+            float left = 8f + (slot ? HandleW : 0f) + StarSize + 8f;
             if (p.Category > 0) left += CatSize + 4f;
-            if (here) left += ArrowSize + 4f;
             return (int)left;
         }
 
-        private static GUIStyle RowStyle(PortalInfo p, bool handle)
+        private static GUIStyle RowStyle(PortalInfo p, bool slot)
         {
-            int left = TextLeft(p, handle, false);
+            int left = TextLeft(p, slot);
             if (!RowStyles.TryGetValue(left, out var st))
                 RowStyles[left] = st = new GUIStyle(_rowText) { padding = new RectOffset(left, 10, 0, 0) };
             return st;
         }
 
-        private static GUIStyle HereStyle(PortalInfo p, bool handle)
+        private static GUIStyle HereStyle(PortalInfo p, bool slot)
         {
-            int left = TextLeft(p, handle, true);
+            int left = TextLeft(p, slot);
             if (!HereStyles.TryGetValue(left, out var st))
                 HereStyles[left] = st = new GUIStyle(_hereText) { padding = new RectOffset(left, 10, 0, 0) };
             return st;
         }
 
-        /// <summary>Handle, star, category icon (and red arrow) on a row.</summary>
-        private static void DrawRowDecor(Rect r, PortalInfo p, bool handle, bool here)
+        /// <summary>Handle or badge, star and category icon on a row ("you are here": all faded).</summary>
+        private static void DrawRowDecor(Rect r, PortalInfo p, bool handle, bool here, RowOpt opt)
         {
             float x = r.x + 8f;
+            var old = GUI.color;
+            if (here) GUI.color = new Color(old.r, old.g, old.b, old.a * 0.4f);
             if (handle)
             {
-                var old = GUI.color;
-                GUI.color = new Color(0.85f, 0.75f, 0.55f, GUI.color.a);
-                for (int i = 0; i < 3; i++)
-                    GUI.DrawTexture(new Rect(x + 2f, r.y + r.height / 2f - 6f + i * 5f, 12f, 2f), Texture2D.whiteTexture);
-                GUI.color = old;
+                DrawGrip(new Rect(x, r.y, 16f, r.height));
+                x += HandleW;
+            }
+            else if (opt?.Lead != null)
+            {
+                const float s = 20f;
+                var lr = new Rect(x - 2f, r.y + (r.height - s) / 2f, s, s);
+                var keep = GUI.color;
+                GUI.color = new Color(opt.LeadTint.r, opt.LeadTint.g, opt.LeadTint.b, opt.LeadTint.a * keep.a);
+                GUI.DrawTexture(lr, opt.Lead, ScaleMode.ScaleToFit, true);
+                GUI.color = keep;
+                if (!string.IsNullOrEmpty(opt.LeadText))
+                    _avatarText.Draw(lr, new GUIContent(opt.LeadText), false, false, false, false);
                 x += HandleW;
             }
             DrawStar(new Rect(x, r.y + (r.height - StarSize) / 2f, StarSize, StarSize), PortalClient.GetFav(p));
             x += StarSize + 6f;
             var icon = p.Category > 0 ? _catIcons[p.Category] : null;
             if (icon != null)
-            {
                 GUI.DrawTexture(new Rect(x, r.y + (r.height - CatSize) / 2f, CatSize, CatSize), icon, ScaleMode.ScaleToFit, true);
-                x += CatSize + 4f;
-            }
-            if (here) GUI.DrawTexture(new Rect(x, r.y + (r.height - ArrowSize) / 2f, ArrowSize, ArrowSize), _arrow);
+            GUI.color = old;
         }
 
         /// <summary>Draws a complete row without any input handling (ghost, lifted row, "you are here").</summary>
-        private static void DrawRowVisual(Rect r, PortalInfo p, string kind, int index, bool handle)
+        private static void DrawRowVisual(Rect r, PortalInfo p, string kind, int index, bool handle, RowOpt opt)
         {
             bool here = kind == "here";
+            bool slot = handle || opt?.Lead != null;
             GUI.DrawTexture(r, RowTexture((int)r.width, (int)r.height, kind, index));
-            DrawRowDecor(r, p, handle, here);
-            var st = here ? HereStyle(p, handle) : RowStyle(p, handle);
+            DrawRowDecor(r, p, handle, here, opt);
+            var st = here ? HereStyle(p, slot) : RowStyle(p, slot);
             st.Draw(r, new GUIContent(Highlight(p.DisplayName)), false, false, false, false);
             if (here) _hereTag.Draw(r, new GUIContent("you are here"), false, false, false, false);
+            else if (opt?.Tag != null) _distTag.Draw(r, new GUIContent(opt.Tag), false, false, false, false);
+        }
+
+        // ---------- players window ("Players: n of m" in the trips title) ----------
+
+        private static bool _playersOpen;
+        private const float PlayerRowH = 40f;
+
+        private static Rect PlayersRect(int n)
+        {
+            float w = _rect.width - 40f;
+            float h = 70f + Mathf.Max(1, n) * (PlayerRowH + 6f) + 56f;
+            h = Mathf.Min(h, _rect.height - 170f);
+            return new Rect(_rect.x + 20f, _rect.y + 150f, w, h);
+        }
+
+        private static Rect PlayerRow(Rect pr, int i) => new Rect(pr.x + 12f, pr.y + 66f + i * (PlayerRowH + 6f), pr.width - 24f, PlayerRowH);
+        private static Rect PlayersDone(Rect pr) => new Rect(pr.x + 12f, pr.yMax - 50f, pr.width - 24f, 38f);
+
+        private static void PlayersInput(Event ev)
+        {
+            var known = PortalClient.KnownPlayers();
+            var pr = PlayersRect(known.Count);
+            if (ev.type == EventType.KeyDown && ev.keyCode == KeyCode.Escape) { _playersOpen = false; ev.Use(); return; }
+            if (ev.type == EventType.MouseDown)
+            {
+                if (PlayersDone(pr).Contains(ev.mousePosition) || !pr.Contains(ev.mousePosition)) { _playersOpen = false; ev.Use(); return; }
+                for (int i = 0; i < known.Count; i++)
+                {
+                    var row = PlayerRow(pr, i);
+                    if (row.yMax > PlayersDone(pr).y - 4f) break;
+                    if (!row.Contains(ev.mousePosition)) continue;
+                    // first change: start from "everybody" so only this one name flips
+                    var set = new HashSet<string>(known.Where(k => PortalClient.IsTracked(k.Key)).Select(k => k.Key), System.StringComparer.OrdinalIgnoreCase);
+                    if (!set.Remove(known[i].Key)) set.Add(known[i].Key);
+                    // keep names that are not listed right now (offline, no trip yet)
+                    var stored = Prefs.GetTracked();
+                    if (stored != null)
+                        foreach (var n in stored) if (!known.Any(k => string.Equals(k.Key, n, System.StringComparison.OrdinalIgnoreCase))) set.Add(n);
+                    Prefs.SetTracked(set);
+                    break;
+                }
+                ev.Use();
+                return;
+            }
+            if (ev.isMouse || ev.type == EventType.ScrollWheel) ev.Use();
+        }
+
+        private static void DrawPlayers(Event ev)
+        {
+            var known = PortalClient.KnownPlayers();
+            var pr = PlayersRect(known.Count);
+            GUI.DrawTexture(pr, RowTexture((int)pr.width, (int)pr.height, "picker", 0));
+            _pickerTitle.Draw(new Rect(pr.x + 16f, pr.y + 10f, pr.width - 32f, 26f), new GUIContent("Show trips of"), false, false, false, false);
+            _placeholder.Draw(new Rect(pr.x + 16f, pr.y + 34f, pr.width - 32f, 22f), new GUIContent("Pick the players you want to follow. Only for you."), false, false, false, false);
+            var done = PlayersDone(pr);
+            for (int i = 0; i < known.Count; i++)
+            {
+                var row = PlayerRow(pr, i);
+                if (row.yMax > done.y - 4f) break;
+                bool on = PortalClient.IsTracked(known[i].Key);
+                bool hover = row.Contains(ev.mousePosition);
+                GUI.DrawTexture(row, RowTexture((int)row.width, (int)row.height, hover ? "sort-hover" : "sort", i));
+                // check box
+                var cb = new Rect(row.x + 10f, row.y + (row.height - 22f) / 2f, 22f, 22f);
+                GUI.DrawTexture(cb, _checkBox);
+                if (on) GUI.DrawTexture(new Rect(cb.x - 1f, cb.y - 3f, 26f, 26f), _check);
+                // initial badge
+                var badge = new Rect(cb.xMax + 10f, row.y + (row.height - 24f) / 2f, 24f, 24f);
+                var old = GUI.color;
+                GUI.color = PlayerColor(known[i].Key);
+                GUI.DrawTexture(badge, _disc);
+                GUI.color = old;
+                _avatarText.Draw(badge, new GUIContent(known[i].Key.Substring(0, 1).ToUpperInvariant()), false, false, false, false);
+                _playerName.Draw(new Rect(badge.xMax + 10f, row.y, row.width - 160f, row.height), new GUIContent(known[i].Key), false, false, false, false);
+                // online dot
+                bool online = known[i].Value;
+                _distTag.Draw(row, new GUIContent(online ? "online" : "offline"), false, false, false, false);
+                float tw = _distTag.CalcSize(new GUIContent(online ? "online" : "offline")).x;
+                GUI.color = online ? new Color32(110, 210, 90, 255) : new Color32(130, 120, 110, 255);
+                GUI.DrawTexture(new Rect(row.xMax - tw - 14f, row.center.y - 4f, 9f, 9f), _disc);
+                GUI.color = old;
+            }
+            if (known.Count == 0)
+                _placeholder.Draw(new Rect(pr.x + 16f, pr.y + 70f, pr.width - 32f, 30f), new GUIContent("Nobody else has played here yet."), false, false, false, false);
+            GUI.DrawTexture(done, RowTexture((int)done.width, (int)done.height, done.Contains(ev.mousePosition) ? "close-hover" : "close", 0));
+            _closeText.Draw(done, new GUIContent("Done"), false, false, false, false);
         }
 
         // ---------- category filter ----------
@@ -705,8 +1040,10 @@ namespace Portaler
                 case "sort": fill = RowFill; frame = RowFrame; break;
                 case "search": fill = new Color32(66, 48, 35, 255); frame = RowFrame; break;
                 case "search-on": fill = new Color32(66, 48, 35, 255); frame = new Color32(215, 160, 80, 255); break;
-                case "back": fill = new Color32(86, 78, 52, 255); frame = new Color32(160, 145, 95, 255); break;
-                case "back-hover": fill = new Color32(110, 100, 66, 255); frame = new Color32(190, 172, 112, 255); break;
+                case "back": fill = new Color32(118, 90, 46, 255); frame = new Color32(232, 188, 92, 255); break;
+                case "back-hover": fill = new Color32(140, 108, 56, 255); frame = new Color32(255, 214, 125, 255); break;
+                case "back2": fill = new Color32(92, 72, 46, 255); frame = new Color32(176, 146, 92, 255); break;
+                case "back2-hover": fill = new Color32(114, 88, 56, 255); frame = new Color32(205, 172, 110, 255); break;
                 case "sort-hover": fill = HoverFill; frame = HoverFrame; break;
                 case "picker": fill = new Color32(96, 66, 45, 255); frame = PanelFrame; break;
                 case "sort-on": case "sort-on-hover": fill = CloseHoverFill; frame = HoverFrame; break;
@@ -747,10 +1084,10 @@ namespace Portaler
             _rowText.active.textColor = Orange;
             _rowText.normal.background = _rowText.hover.background = _rowText.active.background = null;
 
-            _hereText = new GUIStyle(_rowText) { padding = new RectOffset(20 + (int)StarSize + (int)ArrowSize, 10, 0, 0) };
+            _hereText = new GUIStyle(_rowText) { padding = new RectOffset(16 + (int)StarSize, 10, 0, 0) };
             _hereText.normal.textColor = HereText;
             _hereTag = new GUIStyle(_rowText) { fontSize = 13, fontStyle = FontStyle.Italic, alignment = TextAnchor.MiddleRight, padding = new RectOffset(0, 12, 0, 0) };
-            _hereTag.normal.textColor = new Color32(255, 160, 140, 255);
+            _hereTag.normal.textColor = new Color32(150, 142, 130, 255);
 
             _closeText = new GUIStyle(_rowText) { alignment = TextAnchor.MiddleCenter, padding = new RectOffset(8, 8, 0, 0) };
             _sortText = new GUIStyle(_closeText) { fontSize = 15, padding = new RectOffset(6, 6, 0, 0), margin = new RectOffset(2, 2, 0, 0) };
@@ -777,10 +1114,6 @@ namespace Portaler
 
             _rowText.richText = true;
             _hereText.richText = true;
-            _backLabel = new GUIStyle(_hint) { fontSize = 14, fontStyle = FontStyle.Bold, alignment = TextAnchor.MiddleLeft, wordWrap = false, padding = new RectOffset(0, 0, 0, 0) };
-            _backLabel.normal.textColor = new Color32(220, 200, 150, 255);
-            float labelW = _backLabel.CalcSize(new GUIContent("Back to:")).x;
-            _backText = new GUIStyle(_rowText) { richText = false, padding = new RectOffset(36 + (int)labelW + 8, 120, 0, 0) };
             _searchStyle = new GUIStyle(GUI.skin.textField) { fontSize = 18, alignment = TextAnchor.MiddleLeft, padding = new RectOffset(4, 4, 0, 0) };
             _searchStyle.normal.background = _searchStyle.hover.background = _searchStyle.focused.background = _searchStyle.active.background = null;
             _searchStyle.normal.textColor = _searchStyle.hover.textColor = _searchStyle.focused.textColor = _searchStyle.active.textColor = new Color32(255, 240, 210, 255);
@@ -797,10 +1130,23 @@ namespace Portaler
             _pickerX.normal.textColor = new Color32(225, 205, 160, 255);
             _catIcons = new Texture2D[Categories.Count];
             for (int c = 1; c < Categories.Count; c++) _catIcons[c] = Art.CategoryIcon(c);
-            _backIcon = Art.ArrowLeft(new Color32(240, 215, 140, 255));
+            _backIcon = Art.ArrowLeft(new Color32(255, 215, 120, 255));
             _headerButton.hover.textColor = new Color32(255, 214, 140, 255);
             _headerButton.active.textColor = Color.white;
             _headerButton.normal.background = _headerButton.hover.background = _headerButton.active.background = null;
+            _headerButtonH = new GUIStyle(_headerButton) { padding = new RectOffset(36, 4, 2, 2) };
+
+            _smallText = new GUIStyle(_sortText) { fontSize = 14, padding = new RectOffset(4, 4, 0, 0), margin = new RectOffset(0, 0, 0, 0) };
+            _smallLabel = new GUIStyle(_placeholder) { fontSize = 14, alignment = TextAnchor.MiddleRight };
+            _avatarText = new GUIStyle(_rowText) { fontSize = 13, alignment = TextAnchor.MiddleCenter, padding = new RectOffset(0, 0, 0, 0), margin = new RectOffset(0, 0, 0, 0), richText = false };
+            _avatarText.normal.textColor = Color.white;
+            _playerName = new GUIStyle(_rowText) { padding = new RectOffset(0, 0, 0, 0), richText = false };
+            _disc = Art.Disc();
+            _check = Art.Check(Gold);
+            _checkBox = Art.Box(new Color32(50, 36, 26, 255), new Color32(30, 21, 15, 255), new Color32(170, 140, 100, 255), 2);
+            _foldOpenLight = Art.ArrowDown(new Color32(240, 220, 180, 255));
+            _glowStyle = new GUIStyle { border = new RectOffset(8, 8, 8, 8) };
+            _glowStyle.normal.background = Art.RectGlow(new Color(1f, 0.78f, 0.3f, 0.9f), 8);
 
             // Wide enough for a 25 character name (+ star, arrow, distance tag, padding, frame, scrollbar).
             float nameWidth = _rowText.CalcSize(new GUIContent(new string('M', NameChars))).x;

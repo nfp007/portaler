@@ -15,6 +15,7 @@ namespace Portaler
         public const string RpcFavs = "Portaler_Favs";
         public const string RpcShared = "Portaler_Shared";
         public const string RpcSettings = "Portaler_Settings";
+        public const string RpcTrips = "Portaler_Trips";
 
         /// <summary>Restriction setting received from the server (null = not received yet, use own config).</summary>
         private static bool? _serverRestrictions;
@@ -46,7 +47,6 @@ namespace Portaler
         private static float _activatedAt;
 
         private const float LeaveDistance = 4f;
-        public const int LastBuiltCount = 3;
 
         private static readonly Dictionary<ZDOID, Minimap.PinData> Pins = new Dictionary<ZDOID, Minimap.PinData>();
         private static bool _pinsDirty;
@@ -62,6 +62,8 @@ namespace Portaler
             ZRoutedRpc.instance.Register(RpcFavs, new Action<long, ZPackage>(OnFavs));
             ZRoutedRpc.instance.Register(RpcShared, new Action<long, ZPackage>(OnShared));
             ZRoutedRpc.instance.Register(RpcSettings, new Action<long, bool>((sender, restricted) => _serverRestrictions = restricted));
+            ZRoutedRpc.instance.Register(RpcTrips, new Action<long, ZPackage>(OnTrips));
+            Trips = new List<TripInfo>();
             _serverRestrictions = null;
             Portals = new List<PortalInfo>();
             Favorites = new HashSet<ZDOID>();
@@ -138,6 +140,71 @@ namespace Portaler
         }
 
         private static void OnShared(long sender, ZPackage pkg) => SharedFavorites = ReadIds(pkg);
+
+        // ---------- other players' last trips (shared through the server) ----------
+
+        public class TripInfo
+        {
+            public long PlayerId;
+            public string Name;
+            public ZDOID PortalId;
+            public long AgeAtReceive;     // seconds, as told by the server
+            public float ReceivedAt;      // Time.realtimeSinceStartup
+            public float AgeSeconds => AgeAtReceive + (Time.realtimeSinceStartup - ReceivedAt);
+        }
+
+        /// <summary>Last portal each player travelled to (everybody, including this player).</summary>
+        public static List<TripInfo> Trips = new List<TripInfo>();
+
+        private static void OnTrips(long sender, ZPackage pkg)
+        {
+            var list = new List<TripInfo>();
+            int n = pkg.ReadInt();
+            float now = Time.realtimeSinceStartup;
+            for (int i = 0; i < n; i++)
+                list.Add(new TripInfo { PlayerId = pkg.ReadLong(), Name = pkg.ReadString(), PortalId = pkg.ReadZDOID(), AgeAtReceive = pkg.ReadLong(), ReceivedAt = now });
+            Trips = list;
+        }
+
+        private static string LocalPlayerName => Player.m_localPlayer != null ? Player.m_localPlayer.GetPlayerName() : "";
+
+        /// <summary>Players that can be followed: everybody with a trip, plus everybody online (never yourself). Value = online.</summary>
+        public static List<KeyValuePair<string, bool>> KnownPlayers()
+        {
+            var online = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            try
+            {
+                if (ZNet.instance != null)
+                    foreach (var pi in ZNet.instance.GetPlayerList())
+                        if (!string.IsNullOrEmpty(pi.m_name)) online.Add(pi.m_name);
+            }
+            catch { }
+            var names = new HashSet<string>(online, StringComparer.OrdinalIgnoreCase);
+            foreach (var t in Trips) if (t.PlayerId != LocalPlayerId && !string.IsNullOrEmpty(t.Name)) names.Add(t.Name);
+            names.Remove(LocalPlayerName);
+            return names.OrderBy(x => x, StringComparer.OrdinalIgnoreCase)
+                        .Select(x => new KeyValuePair<string, bool>(x, online.Contains(x))).ToList();
+        }
+
+        public static bool IsTracked(string name)
+        {
+            var set = Prefs.GetTracked();
+            return set == null || set.Contains(name);
+        }
+
+        /// <summary>Last trips of the players this character follows, newest first.</summary>
+        public static List<KeyValuePair<TripInfo, PortalInfo>> TrackedTrips()
+        {
+            var result = new List<KeyValuePair<TripInfo, PortalInfo>>();
+            foreach (var t in Trips.OrderBy(t => t.AgeSeconds))
+            {
+                if (t.PlayerId == LocalPlayerId || string.Equals(t.Name, LocalPlayerName, StringComparison.OrdinalIgnoreCase)) continue;
+                if (!IsTracked(t.Name)) continue;
+                var p = Portals.FirstOrDefault(x => x.Id == t.PortalId);
+                if (p != null) result.Add(new KeyValuePair<TripInfo, PortalInfo>(t, p));
+            }
+            return result;
+        }
 
         private static HashSet<ZDOID> ReadIds(ZPackage pkg)
         {
@@ -533,21 +600,24 @@ namespace Portaler
             _glowId = ZDOID.None;
         }
 
-        /// <summary>The portal this character last travelled from (if it still exists and is not the current one).</summary>
-        public static PortalInfo BackPortal
+        /// <summary>The portals this character last travelled from, newest first (only existing ones, never the current one).</summary>
+        public static List<PortalInfo> BackPortals
         {
             get
             {
-                var pos = Prefs.GetBack();
-                if (pos == null) return null;
-                PortalInfo best = null;
-                float bestD = 1.5f;
-                foreach (var p in Portals)
+                var result = new List<PortalInfo>();
+                foreach (var pos in Prefs.GetBackList())
                 {
-                    float d = Utils.DistanceXZ(p.Position, pos.Value);
-                    if (d < bestD && Mathf.Abs(p.Position.y - pos.Value.y) < 3f) { bestD = d; best = p; }
+                    PortalInfo best = null;
+                    float bestD = 1.5f;
+                    foreach (var p in Portals)
+                    {
+                        float d = Utils.DistanceXZ(p.Position, pos);
+                        if (d < bestD && Mathf.Abs(p.Position.y - pos.y) < 3f) { bestD = d; best = p; }
+                    }
+                    if (best != null && best.Id != SourceId && !result.Contains(best)) result.Add(best);
                 }
-                return best != null && best.Id != SourceId ? best : null;
+                return result.Take(Prefs.BackCount).ToList();
             }
         }
 
@@ -556,7 +626,7 @@ namespace Portaler
 
         public static List<PortalInfo> LastBuilt =>
             Portals.Where(p => p.BuiltAt > 0).OrderByDescending(p => p.BuiltAt)
-                   .Take(LastBuiltCount).ToList();
+                   .Take(Prefs.LastBuiltCount).ToList();
 
         public static void TeleportTo(PortalInfo target)
         {
@@ -580,7 +650,10 @@ namespace Portaler
 
             // Like vanilla: land in front of the target portal, facing away from it.
             Vector3 exit = target.Position + target.Rotation * Vector3.forward * _exitDistance + Vector3.up;
-            Prefs.SetBack(SourcePosition); // the "Back to" row will offer the portal we leave from
+            Prefs.PushBack(SourcePosition); // the "Back to" rows will offer the portal we leave from
+            // tell the server (and so everybody) where we went: "Players' last trips"
+            if (ZRoutedRpc.instance != null && LocalPlayerId != 0)
+                ZRoutedRpc.instance.InvokeRoutedRPC(PortalServer.RpcTrip, LocalPlayerId, player.GetPlayerName(), target.Id);
             Deactivate(true);
             player.TeleportTo(exit, target.Rotation, true);
             Plugin.Log.LogInfo($"Teleporting to {target.DisplayName}");
