@@ -397,6 +397,58 @@ namespace Portaler
         private static Vector3 _savedOffset, _targetOffset;
         private static float _savedZoom, _targetZoom;
         private static bool _moving;
+        // eased glide: from -> to over a fixed time
+        private static Vector3 _fromOffset;
+        private static float _fromZoom, _moveStart, _moveTime;
+
+        private static void StartMove(Minimap map, Vector3 offset, float zoom, bool instant)
+        {
+            _targetOffset = offset;
+            _targetZoom = zoom;
+            _fromOffset = MapOffset(map);
+            _fromZoom = map.LargeZoom;
+            _moveStart = Time.unscaledTime;
+            _moveTime = instant ? 0f : Mathf.Max(0.05f, Plugin.HoverMoveSeconds.Value);
+            _moving = true;
+        }
+
+        /// <summary>
+        /// View for a preview. Close portals (within HoverMaxFitMeters): frame both, with extra room around the target.
+        /// Far portals: show the target at the usual close zoom, without gliding across the world.
+        /// </summary>
+        private static void PreviewView(Minimap map, Vector3 from, Vector3 to, out Vector3 center, out float zoom, out bool instant)
+        {
+            float worldSize = Mathf.Max(1f, map.m_textureSize * map.m_pixelSize);
+            float regionZoom = Mathf.Clamp(Plugin.HoverZoomMeters.Value / worldSize, map.m_minZoom, map.m_maxZoom);
+            float dist = Utils.DistanceXZ(from, to);
+
+            if (dist > Plugin.HoverMaxFitMeters.Value)
+            {
+                center = to; zoom = regionZoom; instant = true;
+                return;
+            }
+
+            // box around both portals; more room around the target than around your own portal
+            float mSrc = 150f, mDst = 400f;
+            float minX = Mathf.Min(from.x - mSrc, to.x - mDst), maxX = Mathf.Max(from.x + mSrc, to.x + mDst);
+            float minZ = Mathf.Min(from.z - mSrc, to.z - mDst), maxZ = Mathf.Max(from.z + mSrc, to.z + mDst);
+
+            // the list covers the left part of the screen: fit the box into the part right of it
+            var rect = map.m_mapImageLarge != null ? map.m_mapImageLarge.rectTransform.rect : new Rect(0, 0, Screen.width, Screen.height);
+            float aspect = rect.height > 0 ? rect.width / rect.height : (float)Screen.width / Screen.height;
+            float hidden = Mathf.Clamp01(PortalUI.PanelRight / Mathf.Max(1f, Screen.width));
+            float visibleW = Mathf.Max(0.3f, 1f - hidden);
+
+            float zoomH = (maxZ - minZ) / worldSize;
+            float zoomW = (maxX - minX) / (worldSize * aspect * visibleW);
+            zoom = Mathf.Clamp(Mathf.Max(zoomH, zoomW), map.m_minZoom, map.m_maxZoom);
+
+            // shift the map so the box sits in the middle of the visible part
+            float viewWidthMeters = zoom * worldSize * aspect;
+            float shift = hidden * 0.5f * viewWidthMeters;
+            center = new Vector3((minX + maxX) * 0.5f - shift, to.y, (minZ + maxZ) * 0.5f);
+            instant = false;
+        }
 
         private static Vector3 _lastOffset;
         private static float _lastZoom;
@@ -422,11 +474,9 @@ namespace Portaler
                 if (Time.unscaledTime - _hoverSince >= Plugin.HoverDelay.Value && _glowId != hovered.Id)
                 {
                     if (!_saved) { _saved = true; _savedOffset = MapOffset(map); _savedZoom = map.LargeZoom; }
-                    _targetOffset = hovered.Position - player.transform.position;
-                    float worldSize = Mathf.Max(1f, map.m_textureSize * map.m_pixelSize);
-                    float regionZoom = Mathf.Clamp(Plugin.HoverZoomMeters.Value / worldSize, map.m_minZoom, map.m_maxZoom);
-                    _targetZoom = Mathf.Min(map.LargeZoom, regionZoom); // only zoom in, never out
-                    _moving = true; _returning = false;
+                    PreviewView(map, SourcePosition, hovered.Position, out Vector3 center, out float zoom, out bool instant);
+                    StartMove(map, center - player.transform.position, zoom, instant);
+                    _returning = false;
                     SetGlow(hovered.Id);
                 }
             }
@@ -440,7 +490,7 @@ namespace Portaler
                     if (Time.unscaledTime - _leftListAt > Plugin.HoverReturnDelay.Value)
                     {
                         StopGlow();
-                        if (Plugin.HoverReturn.Value) { _targetOffset = _savedOffset; _targetZoom = _savedZoom; _moving = true; _returning = true; }
+                        if (Plugin.HoverReturn.Value) { StartMove(map, _savedOffset, _savedZoom, false); _returning = true; }
                         else { _saved = false; _moving = false; }
                     }
                 }
@@ -448,10 +498,13 @@ namespace Portaler
 
             if (_moving)
             {
-                float k = 1f - Mathf.Exp(-Time.unscaledDeltaTime * 10f); // ~0.3 s glide
-                Vector3 off = Vector3.Lerp(MapOffset(map), _targetOffset, k);
-                float zoom = Mathf.Lerp(map.LargeZoom, _targetZoom, k);
-                if ((off - _targetOffset).sqrMagnitude < 0.25f && Mathf.Abs(zoom - _targetZoom) < 0.0005f)
+                // calm glide: soft start, soft stop (smoothstep over HoverMoveSeconds); 0 s = instant
+                float t = _moveTime <= 0f ? 1f : Mathf.Clamp01((Time.unscaledTime - _moveStart) / _moveTime);
+                float e = t * t * (3f - 2f * t);
+                Vector3 off = Vector3.Lerp(_fromOffset, _targetOffset, e);
+                // zoom eases in log space so zooming in and out feel equally calm
+                float zoom = Mathf.Exp(Mathf.Lerp(Mathf.Log(Mathf.Max(1e-5f, _fromZoom)), Mathf.Log(Mathf.Max(1e-5f, _targetZoom)), e));
+                if (t >= 1f)
                 {
                     off = _targetOffset; zoom = _targetZoom;
                     _moving = false;

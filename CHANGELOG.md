@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.0.7
+- Map preview reworked: close portals (up to 2 km) are framed together with extra room around the target; far targets are shown directly instead of a fast flight across the map.
+- Calm glide (1 s, soft start and stop) to the preview and back.
+- The preview stays 10 s after the mouse leaves the list.
+- New settings `HoverMaxFitMeters`, `HoverMoveSeconds`; `HoverReturnDelay` replaced by `HoverStaySeconds`.
+
 ## 1.0.6
 - Colours match Valheim's own panels: warm medium-brown wood instead of almost black. (A colour correction made everything far too dark; it is removed.)
 

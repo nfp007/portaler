@@ -15,7 +15,7 @@ namespace Portaler
     {
         public const string Guid = "nfp007.Portaler";
         public const string Name = "Portaler";
-        public const string Version = "1.0.6";
+        public const string Version = "1.0.7";
 
         internal static Plugin Instance;
         internal static ManualLogSource Log;
@@ -26,7 +26,7 @@ namespace Portaler
         // personal settings (each PC)
         internal static BepInEx.Configuration.ConfigEntry<KeyCode> RenameKey, CategoryKey;
         internal static BepInEx.Configuration.ConfigEntry<bool> HoverShowsMap, HoverReturn, HoverLine;
-        internal static BepInEx.Configuration.ConfigEntry<float> HoverDelay, HoverZoomMeters, HoverReturnDelay, PinSizePreview, PinSizeHover;
+        internal static BepInEx.Configuration.ConfigEntry<float> HoverDelay, HoverZoomMeters, HoverReturnDelay, PinSizePreview, PinSizeHover, HoverMaxFitMeters, HoverMoveSeconds;
 
         private Harmony _harmony;
 
@@ -45,9 +45,11 @@ namespace Portaler
 
             HoverShowsMap = Config.Bind("Map", "HoverShowsMap", true, "Hovering a name in the list moves the map to that portal.");
             HoverDelay = Config.Bind("Map", "HoverDelay", 0.4f, "Seconds the mouse must rest on a name before the map moves.");
-            HoverZoomMeters = Config.Bind("Map", "HoverZoomMeters", 1500f, "How much of the world the map shows around the portal (metres). The map only zooms in, never out.");
+            HoverZoomMeters = Config.Bind("Map", "HoverZoomMeters", 1500f, "For far targets: how much of the world the map shows around the target portal (metres).");
             HoverReturn = Config.Bind("Map", "HoverReturn", true, "When the mouse leaves the list, the map glides back to where it was (unless you move or zoom the map yourself).");
-            HoverReturnDelay = Config.Bind("Map", "HoverReturnDelay", 5f, "Seconds the map stays on the previewed portal after the mouse leaves the list.");
+            HoverReturnDelay = Config.Bind("Map", "HoverStaySeconds", 10f, "Seconds the map stays on the preview after the mouse leaves the list, before it glides back.");
+            HoverMaxFitMeters = Config.Bind("Map", "HoverMaxFitMeters", 2000f, "Portals closer than this (metres) are shown together: the map frames both. Farther targets are shown directly, without gliding across the map.");
+            HoverMoveSeconds = Config.Bind("Map", "HoverMoveSeconds", 1f, "How long the calm glide to a preview (and back) takes, in seconds.");
             PinSizePreview = Config.Bind("Map", "PinSizePreview", 1.6f, "Size of the previewed portal's pin on the map (1 = normal). It stays this big as long as the fiery line is shown.");
             PinSizeHover = Config.Bind("Map", "PinSizeHover", 1.3f, "Size of a portal pin while the mouse is over it on the map (1 = normal).");
             HoverLine = Config.Bind("Map", "HoverLine", true, "Draw a fiery line from the portal you stand in to the previewed portal.");

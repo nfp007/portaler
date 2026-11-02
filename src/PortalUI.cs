@@ -14,6 +14,9 @@ namespace Portaler
     {
         public static bool MouseOverList { get; private set; }
 
+        /// <summary>Right edge of the list panel on screen (pixels), 0 when closed.</summary>
+        public static float PanelRight => PortalClient.Active ? _rect.xMax : 0f;
+
         /// <summary>Mouse is over the list, or a button was pressed on it and is still held (scrollbar drag).</summary>
         public static bool ListHasMouse => MouseOverList || _pressedInList;
         private static bool _pressedInList;

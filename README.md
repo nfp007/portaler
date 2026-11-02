@@ -24,8 +24,10 @@ Every feature says what is **🌐 shared** (the same for everybody on the server
 - 🌐 Shared: the list of portals (everybody sees every portal).
 
 **2. Map preview**
-- Rest the mouse on a name: the map glides to that portal, its pin gets bigger, and a soft fiery line flows from your portal to it.
-- The map stays there 5 seconds after the mouse leaves the list, then glides back. Move or zoom the map yourself and it stays where you put it.
+- Rest the mouse on a name: a soft fiery line flows from your portal to it and its pin gets bigger, so you see where the trip goes.
+- Close portals (up to 2 km apart): the map calmly frames **both** portals, with extra room around the target.
+- Far portals: the map shows the target right away, without flying across the world.
+- The map stays there 10 seconds after the mouse leaves the list, then glides back. Move or zoom the map yourself and it stays where you put it.
 - 👤 Personal: only your own map moves. Timing, zoom and the line can be changed in your config.
 
 **3. Favorites**
@@ -115,9 +117,11 @@ Config file: `BepInEx/config/nfp007.Portaler.cfg` (created on first start). `[Se
 | `[Controls] CategoryKey` | `T` | Key to choose the hovered portal's category. |
 | `[Map] HoverShowsMap` | `true` | Hovering a name moves the map to that portal. |
 | `[Map] HoverDelay` | `0.4` | Seconds the mouse must rest on a name before the map moves. |
-| `[Map] HoverZoomMeters` | `1500` | How much of the world is shown around the portal (metres). The map only zooms in, never out. |
+| `[Map] HoverMaxFitMeters` | `2000` | Portals closer than this (metres) are framed together; farther targets are shown directly. |
+| `[Map] HoverZoomMeters` | `1500` | For far targets: how much of the world is shown around the target (metres). |
+| `[Map] HoverMoveSeconds` | `1` | Length of the calm glide to the preview and back. |
 | `[Map] HoverReturn` | `true` | When the mouse leaves the list, the map glides back to where it was (not if you moved or zoomed the map yourself). |
-| `[Map] HoverReturnDelay` | `5` | Seconds the map stays on the previewed portal before gliding back. |
+| `[Map] HoverStaySeconds` | `10` | Seconds the preview stays after the mouse leaves the list, before the map glides back. |
 | `[Map] HoverLine` | `true` | Draw the fiery line from your portal to the previewed one. |
 | `[Map] PinSizePreview` | `1.6` | Size of the previewed portal's pin (1 = normal), as long as the fiery line is shown. |
 | `[Map] PinSizeHover` | `1.3` | Size of a portal pin while the mouse is over it on the map. |
