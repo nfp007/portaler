@@ -182,8 +182,12 @@ namespace Portaler
             catch (Exception e) { Plugin.Log.LogWarning("Could not read prefs: " + e.Message); }
         }
 
+        /// <summary>Goes up on every change (the list rebuilds what depends on these settings).</summary>
+        public static int Version { get; private set; }
+
         private static void Save()
         {
+            Version++;
             try
             {
                 var lines = new System.Collections.Generic.List<string>

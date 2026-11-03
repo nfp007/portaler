@@ -1,6 +1,6 @@
 {
   "name": "Portaler",
-  "version_number": "1.0.12",
+  "version_number": "1.0.13",
   "website_url": "https://github.com/nfp007/portaler",
   "description": "Every portal connects to every portal. Pick a destination from a list or the map with a live preview. Favorites, categories, search, back history, other players' last trips and biome auto-names, all synced by the server.",
   "dependencies": [

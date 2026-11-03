@@ -15,7 +15,7 @@ namespace Portaler
     {
         public const string Guid = "nfp007.Portaler";
         public const string Name = "Portaler";
-        public const string Version = "1.0.12";
+        public const string Version = "1.0.13";
 
         internal static Plugin Instance;
         internal static ManualLogSource Log;
@@ -26,7 +26,7 @@ namespace Portaler
         // personal settings (each PC)
         internal static BepInEx.Configuration.ConfigEntry<KeyCode> RenameKey, CategoryKey;
         internal static BepInEx.Configuration.ConfigEntry<bool> HoverShowsMap, HoverReturn, HoverLine;
-        internal static BepInEx.Configuration.ConfigEntry<bool> PerfLog;
+        internal static BepInEx.Configuration.ConfigEntry<bool> PerfLog, QuickArrival;
         internal static BepInEx.Configuration.ConfigEntry<float> HoverDelay, HoverZoomMeters, HoverReturnDelay, PinSizePreview, PinSizeHover, HoverMaxFitMeters, HoverMoveSeconds;
 
         private Harmony _harmony;
@@ -54,6 +54,10 @@ namespace Portaler
             PinSizePreview = Config.Bind("Map", "PinSizePreview", 1.6f, "Size of the previewed portal's pin on the map (1 = normal). It stays this big as long as the fiery line is shown.");
             PinSizeHover = Config.Bind("Map", "PinSizeHover", 1.3f, "Size of a portal pin while the mouse is over it on the map (1 = normal).");
             HoverLine = Config.Bind("Map", "HoverLine", true, "Draw a fiery line from the portal you stand in to the previewed portal.");
+            QuickArrival = Config.Bind("Travel", "QuickArrival", true,
+                "Shorter waits for trips through Portaler: you are moved as soon as the screen is dark and arrive as soon as the " +
+                "target area is loaded, instead of the game's fixed 2 s + at least 8 s. You still never arrive before the area is ready. " +
+                "Switched off automatically when Fast Teleport is installed.");
             PerfLog = Config.Bind("Debug", "PerfLog", false,
                 "Write Portaler's own time and memory use per frame, and how long each teleport takes, to the BepInEx log every 10 seconds.");
             _harmony = new Harmony(Guid);

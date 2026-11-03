@@ -10,13 +10,14 @@ namespace Portaler
     /// </summary>
     public static class Perf
     {
-        public enum S { ServerTick, ClientTick, PinScan, PinRefresh, Hide, Scale, Gui, Line, Count }
+        public enum S { ServerTick, ClientTick, PinScan, PinRefresh, Hide, Scale, Gui, Line, Travel, MapClose, TpStart, Count }
 
-        private static readonly string[] Names = { "srvTick", "cliTick", "pinScan", "pinRefresh", "hide", "scale", "gui", "line" };
+        private static readonly string[] Names = { "srvTick", "cliTick", "pinScan", "pinRefresh", "hide", "scale", "gui", "line", "click", "mapClose", "tpStart" };
         private const float Interval = 10f;
 
         // measured inside cliTick, so not added to the total a second time
-        private static bool Nested(int i) => i == (int)S.PinScan || i == (int)S.PinRefresh || i == (int)S.Line;
+        private static bool Nested(int i) => i == (int)S.PinScan || i == (int)S.PinRefresh || i == (int)S.Line
+                                              || i == (int)S.Travel || i == (int)S.MapClose || i == (int)S.TpStart;
 
 #if PERF
         public const bool DevBuild = true;   // developer build: always measures
@@ -111,7 +112,7 @@ namespace Portaler
             sb.Append($" | Portaler avg {_sumTotal / _frames:0.000} ms, max {_maxTotal:0.00} ms per frame");
             sb.Append($" | alloc avg {_sumAlloc / _frames / 1024.0:0.0} KB, max {_maxAlloc / 1024.0:0} KB per frame");
             if (_framesOpen > 0) sb.Append($" | OnGUI calls {(double)_sumGuiCalls / _frames:0.0}/frame");
-            sb.Append(" | ms avg/max per frame (* = part of cliTick):");
+            sb.Append(" | ms avg/max per frame (* = part of cliTick or gui):");
             for (int i = 0; i < Names.Length; i++)
                 if (Hits[i] > 0) sb.Append($" {Names[i]}{(Nested(i) ? "*" : "")} {SumMs[i] / _frames:0.000}/{MaxMs[i]:0.00}");
             int pins = 0;
@@ -168,7 +169,8 @@ namespace Portaler
                 string moved = _tpMoved >= 0f ? $"{_tpMoved:0.0} s" : "?";
                 string ready = _tpReady >= 0f ? $"{_tpReady:0.0} s" : "?";
                 Plugin.Log.LogInfo($"[Perf] Teleport to '{_tpName}' ({_tpDistance / 1000f:0.0} km): moved after {moved}, " +
-                                   $"area ready after {ready}, arrived after {t:0.0} s (worst frame {_tpWorstFrame * 1000f:0} ms)");
+                                   $"area ready after {ready}, arrived after {t:0.0} s (worst frame {_tpWorstFrame * 1000f:0} ms, " +
+                                   $"quick arrival {(QuickArrival.Enabled ? "on" : "off")})");
             }
             else if (t > 60f) { _tracking = false; Plugin.Log.LogWarning($"[Perf] Teleport to '{_tpName}' still running after 60 s"); }
         }

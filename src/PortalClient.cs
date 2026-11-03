@@ -72,6 +72,9 @@ namespace Portaler
             Active = false;
         }
 
+        /// <summary>Goes up whenever the portal list, favorites, categories or trips change (the list redraws its rows then).</summary>
+        public static int DataVersion { get; private set; }
+
         private static long LocalPlayerId => Player.m_localPlayer != null ? Player.m_localPlayer.GetPlayerID() : 0L;
 
         public static void RequestList()
@@ -85,6 +88,7 @@ namespace Portaler
         {
             Portals = PortalInfo.ReadList(pkg);
             _pinsDirty = true;
+            DataVersion++;
         }
 
         /// <summary>This player's order of favorites (first = top). Favorites missing here go to the end.</summary>
@@ -96,6 +100,7 @@ namespace Portaler
             Favorites = ReadIds(pkg);
             SharedFavorites = ReadIds(pkg);
             FavOrder = new List<ZDOID>(ReadIdList(pkg));
+            DataVersion++;
         }
 
         private static List<ZDOID> ReadIdList(ZPackage pkg)
@@ -121,6 +126,7 @@ namespace Portaler
         public static void SetFavoriteOrder(List<PortalInfo> ordered)
         {
             FavOrder = ordered.Select(p => p.Id).ToList();
+            DataVersion++;
             if (ZRoutedRpc.instance == null || LocalPlayerId == 0) return;
             var pkg = new ZPackage();
             pkg.Write(FavOrder.Count);
@@ -136,10 +142,11 @@ namespace Portaler
             foreach (var x in Portals) if (x.Id == p.Id) x.Category = category; // show it right away
             p.Category = category;
             _pinsDirty = true;
+            DataVersion++;
             ZRoutedRpc.instance.InvokeRoutedRPC(PortalServer.RpcSetCategory, p.Id, category);
         }
 
-        private static void OnShared(long sender, ZPackage pkg) => SharedFavorites = ReadIds(pkg);
+        private static void OnShared(long sender, ZPackage pkg) { SharedFavorites = ReadIds(pkg); DataVersion++; }
 
         // ---------- other players' last trips (shared through the server) ----------
 
@@ -164,6 +171,7 @@ namespace Portaler
             for (int i = 0; i < n; i++)
                 list.Add(new TripInfo { PlayerId = pkg.ReadLong(), Name = pkg.ReadString(), PortalId = pkg.ReadZDOID(), AgeAtReceive = pkg.ReadLong(), ReceivedAt = now });
             Trips = list;
+            DataVersion++;
         }
 
         private static string LocalPlayerName => Player.m_localPlayer != null ? Player.m_localPlayer.GetPlayerName() : "";
@@ -657,13 +665,20 @@ namespace Portaler
 
             // Like vanilla: land in front of the target portal, facing away from it.
             Vector3 exit = target.Position + target.Rotation * Vector3.forward * _exitDistance + Vector3.up;
+            var pt = Perf.Begin();
             Prefs.PushBack(SourcePosition); // the "Back to" rows will offer the portal we leave from
             // tell the server (and so everybody) where we went: "Players' last trips"
             if (ZRoutedRpc.instance != null && LocalPlayerId != 0)
                 ZRoutedRpc.instance.InvokeRoutedRPC(PortalServer.RpcTrip, LocalPlayerId, player.GetPlayerName(), target.Id);
             Perf.TeleportStarted(target, exit, Utils.DistanceXZ(SourcePosition, target.Position));
+            Perf.End(Perf.S.Travel, pt);
+            pt = Perf.Begin();
             Deactivate(true);
+            Perf.End(Perf.S.MapClose, pt);
+            pt = Perf.Begin();
+            QuickArrival.Begin(player);
             player.TeleportTo(exit, target.Rotation, true);
+            Perf.End(Perf.S.TpStart, pt);
             Plugin.Log.LogInfo($"Teleporting to {target.DisplayName}");
         }
 

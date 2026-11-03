@@ -67,9 +67,6 @@ namespace Portaler
         private static Texture2D _starOn, _starOff, _starSilver, _glow, _arrow, _thumb;
         private static float _width;
 
-        private static Texture2D _panelTex;
-        private static Vector2Int _panelSize;
-        private static readonly Dictionary<string, Texture2D> RowTex = new Dictionary<string, Texture2D>();
 
         // Valheim-like colours
         // Palette sampled from Valheim's own panels (crafting, inventory, Tag dialog)
@@ -114,6 +111,8 @@ namespace Portaler
                 _dragGroup = null;
                 _playersOpen = false;
                 if (SearchFocused) { GUIUtility.keyboardControl = 0; SearchFocused = false; }
+                // prepare the look while nobody waits for it, so the first map opening does not freeze
+                if (!_warm && Player.m_localPlayer != null) Prewarm();
                 return;
             }
             EnsureStyles();
@@ -154,22 +153,21 @@ namespace Portaler
             }
             if (ev.type == EventType.Repaint) _hovered = null;
 
-            if (ev.type == EventType.Repaint)
-                GUI.DrawTexture(_rect, PanelTexture((int)_rect.width, (int)_rect.height));
+            if (ev.type == EventType.Repaint) DrawPanel(_rect);
 
             // Our own scrollbar thumb, restored afterwards so other mods' windows are untouched.
             var thumbStyle = GUI.skin.verticalScrollbarThumb;
             var oldThumb = thumbStyle.normal.background;
             var oldThumbBorder = thumbStyle.border;
             thumbStyle.normal.background = _thumb;
-            thumbStyle.border = new RectOffset(2, 2, 2, 2);
+            thumbStyle.border = ThumbBorder;
 
             PortalInfo travel = null, toggle = null;
             try
             {
                 GUILayout.BeginArea(new Rect(_rect.x + 22, _rect.y + 18, _rect.width - 44, _rect.height - 36));
                 GUILayout.Label("Portaler", _title);
-                GUILayout.Label($"Click a name or a map pin to travel. {Plugin.RenameKey.Value} = rename, {Plugin.CategoryKey.Value} = category.\nRight click = favorite. Drag favorites and group titles by their handle.", _hint);
+                GUILayout.Label(HintText(), _hint);
                 GUILayout.Space(6);
                 SortBar();
                 GUILayout.Space(6);
@@ -180,33 +178,23 @@ namespace Portaler
 
                 _scroll = GUILayout.BeginScrollView(_scroll, false, true, GUIStyle.none, _scrollbar);
 
-                string q = (_search ?? "").Trim();
-                bool searching = q.Length > 0;
-                var everything = PortalClient.Portals;
-                IEnumerable<PortalInfo> filtered = everything;
-                if (searching) filtered = filtered.Where(p => p.DisplayName.IndexOf(q, System.StringComparison.OrdinalIgnoreCase) >= 0);
-                if (_catFilter > 0) filtered = filtered.Where(p => p.Category == _catFilter);
-                bool filtering = searching || _catFilter > 0;
+                var m = GetModel(ev);
+                bool filtering = m.Filtering;
                 _filtering = filtering;
-                var all = filtering ? filtered.ToList() : everything;
-                _highlight = searching ? q : null;
+                _highlight = m.Search.Length > 0 ? m.Search : null;
                 _forceOpen = filtering;
-                // favorites in this player's own order (drag and drop)
-                var favs = PortalClient.OrderedFavorites(all);
                 int index = 0;
 
                 if (filtering)
                 {
-                    string what = searching && _catFilter > 0 ? $"\"{q}\" + {Categories.Names[_catFilter]}"
-                                : searching ? $"\"{q}\"" : Categories.Names[_catFilter];
-                    GUILayout.Label($"{all.Count} of {everything.Count} portals match {what}", _distTagLeft);
-                    PortalsBlock(all, ref index, ref travel, ref toggle);
-                    if (all.Count == 0) GUILayout.Label("No portal matches.", _hint);
+                    GUILayout.Label(m.MatchLine, _distTagLeft);
+                    PortalsBlock(m, ref index, ref travel, ref toggle);
+                    if (m.All.Count == 0) GUILayout.Label("No portal matches.", _hint);
                 }
                 else
                 {
-                    // Back to, Favorites, Players' last trips, Last built and the portal list, in this character's order
-                    MovableGroups(favs, all, ref index, ref travel, ref toggle);
+                    // Back to, Players' last trips, Favorites, Last built and the portal list, in this character's order
+                    MovableGroups(m, ref index, ref travel, ref toggle);
                 }
                 GUILayout.EndScrollView();
 
@@ -246,7 +234,7 @@ namespace Portaler
             bool focused = GUI.GetNameOfFocusedControl() == SearchControl;
             if (ev.type == EventType.Repaint)
             {
-                GUI.DrawTexture(r, RowTexture((int)r.width, (int)r.height, focused ? "search-on" : "search", 0));
+                DrawBoard(r, focused ? "search-on" : "search", 0);
                 GUI.DrawTexture(new Rect(r.x + 9, r.y + 8, 18, 18), _magnifier);
             }
             Rect clear = new Rect(r.xMax - 30, r.y + 4, 26, r.height - 8);
@@ -263,8 +251,8 @@ namespace Portaler
             if (ev.type == EventType.Repaint)
             {
                 if (!focused && string.IsNullOrEmpty(_search))
-                    _placeholder.Draw(new Rect(r.x + 32, r.y, r.width - 36, r.height), new GUIContent("Search...  (click to type)"), false, false, false, false);
-                if (hasText) _clearStyle.Draw(clear, new GUIContent("x"), clear.Contains(ev.mousePosition), false, false, false);
+                    _placeholder.Draw(new Rect(r.x + 32, r.y, r.width - 36, r.height), Tmp("Search...  (click to type)"), false, false, false, false);
+                if (hasText) _clearStyle.Draw(clear, Tmp("x"), clear.Contains(ev.mousePosition), false, false, false);
             }
         }
 
@@ -294,7 +282,7 @@ namespace Portaler
         {
             bool active = mode == key || (key == "Biome" && mode != "Name" && mode != "Distance");
             string text = active ? activeText : key;
-            Rect r = GUILayoutUtility.GetRect(new GUIContent(text), _sortText, GUILayout.Height(SortHeight), GUILayout.ExpandWidth(true));
+            Rect r = GUILayoutUtility.GetRect(Tmp(text), _sortText, GUILayout.Height(SortHeight), GUILayout.ExpandWidth(true));
             if (Board(r, text, _sortText, active ? "sort-on" : "sort", key.Length))
             {
                 if (active) Prefs.SortReversed = !Prefs.SortReversed;
@@ -338,7 +326,7 @@ namespace Portaler
             bool dragged = _dragGroup == key;
             bool collapsed = dragged || (!_forceOpen && Prefs.IsCollapsed(key));
             var style = movable ? _headerButtonH : _headerButton;
-            h = GUILayoutUtility.GetRect(new GUIContent(title), style, GUILayout.ExpandWidth(true));
+            h = GUILayoutUtility.GetRect(Tmp(title), style, GUILayout.ExpandWidth(true));
             right = new Rect(h.xMax - rightW - 6f, h.y, rightW, h.height);
             var ev = Event.current;
             var old = GUI.color;
@@ -390,7 +378,7 @@ namespace Portaler
             const float box = 22f, gap = 3f;
             float x = right.xMax - max * (box + gap);
             if (Event.current.type == EventType.Repaint)
-                _smallLabel.Draw(new Rect(x - 44f, right.y, 40f, right.height), new GUIContent("show"), false, false, false, false);
+                _smallLabel.Draw(new Rect(x - 44f, right.y, 40f, right.height), Tmp("show"), false, false, false, false);
             for (int i = 1; i <= max; i++)
             {
                 var b = new Rect(x + (i - 1) * (box + gap), right.y + (right.height - box) / 2f, box, box);
@@ -402,27 +390,13 @@ namespace Portaler
         private static float CountSelectorWidth(int max) => 48f + max * 25f;
 
         /// <summary>"Back to": the last 1-3 portals this character travelled from. The newest one is golden and glows.</summary>
-        private static void BackGroup(List<PortalInfo> backs, ref int index, ref PortalInfo travel, ref PortalInfo toggle)
+        private static void BackGroup(Model m, ref int index, ref PortalInfo travel, ref PortalInfo toggle)
         {
             bool collapsed = GroupHeader("BACK", "Back to", true, CountSelectorWidth(Prefs.MaxBack), out var h, out var right);
             int n = CountSelector(right, Prefs.BackCount, Prefs.MaxBack);
             if (n != Prefs.BackCount) Prefs.BackCount = n;
             if (!collapsed)
-            {
-                for (int i = 0; i < backs.Count; i++)
-                {
-                    var opt = new RowOpt
-                    {
-                        Kind = i == 0 ? "back" : "back2",
-                        Lead = _backIcon,
-                        LeadTint = i == 0 ? Color.white : new Color(1f, 1f, 1f, 0.7f),
-                        Tag = i == 0 ? "previous portal" : $"{i + 1} trips ago",
-                        Inset = 4f,
-                        Glow = i == 0,
-                    };
-                    Row(backs[i], index++, ref travel, ref toggle, false, opt);
-                }
-            }
+                for (int i = 0; i < m.Backs.Count; i++) Row(m.Backs[i], index++, ref travel, ref toggle, false, m.BackOpts[i]);
             EndMovable("BACK", h);
             GUILayout.Space(collapsed ? 2 : 6);
         }
@@ -430,73 +404,39 @@ namespace Portaler
         /// <summary>
         /// The portal list itself (biome groups, or one list when sorted by name or distance) under one movable title.
         /// </summary>
-        private static void PortalsBlock(List<PortalInfo> all, ref int index, ref PortalInfo travel, ref PortalInfo toggle)
+        private static void PortalsBlock(Model m, ref int index, ref PortalInfo travel, ref PortalInfo toggle)
         {
             const string key = "PORTALS";
-            bool collapsed = GroupHeader(key, $"All portals  ({all.Count})", !_filtering, 0f, out var h, out _);
+            bool collapsed = GroupHeader(key, m.AllTitle, !_filtering, 0f, out var h, out _);
             if (!collapsed)
             {
-                bool rev = Prefs.SortReversed;
-                var byName = System.StringComparer.OrdinalIgnoreCase;
-                switch (Prefs.SortMode)
-                {
-                    case "Name":
-                    {
-                        var list = rev ? all.OrderByDescending(p => p.DisplayName, byName).ToList()
-                                       : all.OrderBy(p => p.DisplayName, byName).ToList();
-                        foreach (var p in list) Row(p, index++, ref travel, ref toggle);
-                        break;
-                    }
-                    case "Distance":
-                    {
-                        Vector3 here = PortalClient.SourcePosition;
-                        var list = rev ? all.OrderByDescending(p => Utils.DistanceXZ(p.Position, here)).ToList()
-                                       : all.OrderBy(p => Utils.DistanceXZ(p.Position, here)).ToList();
-                        foreach (var p in list) Row(p, index++, ref travel, ref toggle);
-                        break;
-                    }
-                    default:
-                    {
-                        // Default: Deep North first ... Meadows last ("Other" always at the end). Reversed: Meadows first.
-                        var groups = all.GroupBy(p => p.BiomeCode)
-                            .OrderBy(g => g.Key == "XX" ? 1 : 0)
-                            .ThenBy(g => rev ? Biomes.SortIndex(g.Key) : -Biomes.SortIndex(g.Key));
-                        foreach (var g in groups)
-                        {
-                            var entry = Biomes.Order.FirstOrDefault(b => b.Code == g.Key);
-                            string title = string.IsNullOrEmpty(entry.Display) ? g.Key : entry.Display;
-                            Group(g.Key, $"{title}  ({g.Count()})", g.OrderBy(p => p.DisplayName, byName).ToList(),
-                                ref index, ref travel, ref toggle, 14f);
-                        }
-                        break;
-                    }
-                }
-                if (!_filtering && all.Count <= 1) GUILayout.Label("No other portals yet.", _hint);
+                if (m.Biomes != null)
+                    foreach (var g in m.Biomes) Group(g.Key, g.Title, g.Items, ref index, ref travel, ref toggle, 14f);
+                else
+                    foreach (var p in m.Sorted) Row(p, index++, ref travel, ref toggle);
+                if (!_filtering && m.All.Count <= 1) GUILayout.Label("No other portals yet.", _hint);
             }
-            else index += all.Count;
+            else index += m.All.Count;
             EndMovable(key, h);
             GUILayout.Space(collapsed ? 2 : 6);
         }
 
         /// <summary>Back to, Favorites, Players' last trips, Last built and All portals, in this character's own order.</summary>
-        private static void MovableGroups(List<PortalInfo> favs, List<PortalInfo> all, ref int index, ref PortalInfo travel, ref PortalInfo toggle)
+        private static void MovableGroups(Model m, ref int index, ref PortalInfo travel, ref PortalInfo toggle)
         {
             var ev = Event.current;
-            var order = Prefs.GetGroupOrder();
-            var last = PortalClient.LastBuilt;
-            var backs = PortalClient.BackPortals;
-            var known = PortalClient.KnownPlayers();
+            var order = m.Order;
             if (ev.type == EventType.Repaint) GroupRects.Clear();
 
             foreach (var key in order)
             {
                 switch (key)
                 {
-                    case "BACK": if (backs.Count > 0) BackGroup(backs, ref index, ref travel, ref toggle); break;
-                    case "PORTALS": PortalsBlock(all, ref index, ref travel, ref toggle); break;
-                    case "FAV": if (favs.Count > 0) FavGroup(favs, ref index, ref travel, ref toggle); break;
-                    case "TRIPS": if (known.Count > 0) TripsGroup(known, ref index, ref travel, ref toggle); break;
-                    case "LAST": if (last.Count > 0) LastGroup(last, ref index, ref travel, ref toggle); break;
+                    case "BACK": if (m.Backs.Count > 0) BackGroup(m, ref index, ref travel, ref toggle); break;
+                    case "PORTALS": PortalsBlock(m, ref index, ref travel, ref toggle); break;
+                    case "FAV": if (m.Favs.Count > 0) FavGroup(m.Favs, m.FavTitle, ref index, ref travel, ref toggle); break;
+                    case "TRIPS": if (m.Known.Count > 0) TripsGroup(m, ref index, ref travel, ref toggle); break;
+                    case "LAST": if (m.Last.Count > 0) LastGroup(m.Last, ref index, ref travel, ref toggle); break;
                 }
             }
 
@@ -519,14 +459,14 @@ namespace Portaler
                 GUI.color = old;
                 // the lifted title follows the mouse
                 var lifted = new Rect(first.x + 12f, _groupDragY - 15f, first.width - 20f, 30f);
-                GUI.DrawTexture(lifted, RowTexture((int)lifted.width, (int)lifted.height, "row-hover", 1));
+                DrawBoard(lifted, "row-hover", 1);
                 DrawGrip(new Rect(lifted.x + 4f, lifted.y, 16f, lifted.height));
                 GUI.DrawTexture(new Rect(lifted.x + 24f, lifted.y + (lifted.height - 12f) / 2f, 12f, 12f), _foldOpen);
                 GroupTitles.TryGetValue(_dragGroup, out var t);
-                _headerButtonH.Draw(new Rect(lifted.x + 6f, lifted.y, lifted.width - 6f, lifted.height), new GUIContent(t ?? ""), false, false, false, false);
+                _headerButtonH.Draw(new Rect(lifted.x + 6f, lifted.y, lifted.width - 6f, lifted.height), Tmp(t ?? ""), false, false, false, false);
                 // where it lands, also when the drop line is scrolled out of sight
                 string where = drop < others.Count ? "before " + ShortTitle(others[drop].Key) : "at the end";
-                _distTag.Draw(lifted, new GUIContent("drop: " + where), false, false, false, false);
+                _distTag.Draw(lifted, Tmp("drop: " + where), false, false, false, false);
             }
 
             if (ev.rawType == EventType.MouseUp)
@@ -542,36 +482,21 @@ namespace Portaler
         }
 
         /// <summary>Other players' last trips: where each followed player last went through a portal.</summary>
-        private static void TripsGroup(List<KeyValuePair<string, bool>> known, ref int index, ref PortalInfo travel, ref PortalInfo toggle)
+        private static void TripsGroup(Model m, ref int index, ref PortalInfo travel, ref PortalInfo toggle)
         {
             const string key = "TRIPS";
-            var trips = PortalClient.TrackedTrips();
-            int followed = known.Count(k => PortalClient.IsTracked(k.Key));
-            string btn = $"Players: {followed} of {known.Count}";
-            float bw = _smallText.CalcSize(new GUIContent(btn)).x + 34f;
-            bool collapsed = GroupHeader(key, "Players' last trips", true, bw, out var h, out var right);
+            bool collapsed = GroupHeader(key, "Players' last trips", true, m.PlayersButtonW, out var h, out var right);
 
             var b = new Rect(right.x, right.y + (right.height - 24f) / 2f, right.width, 24f);
-            if (Board(b, btn + "     ", _smallText, "sort", 7)) _playersOpen = true;
+            if (Board(b, m.PlayersButton, _smallText, "sort", 7)) _playersOpen = true;
             if (Event.current.type == EventType.Repaint)
                 GUI.DrawTexture(new Rect(b.xMax - 18f, b.y + 7f, 10f, 10f), _foldOpenLight);
 
             if (!collapsed)
             {
-                if (followed == 0) GUILayout.Label("You follow nobody. Click \"Players\" to choose.", _placeholder);
-                else if (trips.Count == 0) GUILayout.Label("No trips yet.", _placeholder);
-                foreach (var kv in trips)
-                {
-                    string name = kv.Key.Name ?? "?";
-                    var opt = new RowOpt
-                    {
-                        Lead = _disc,
-                        LeadTint = PlayerColor(name),
-                        LeadText = name.Length > 0 ? name.Substring(0, 1).ToUpperInvariant() : "?",
-                        Tag = $"{name}, {Ago(kv.Key.AgeSeconds)}",
-                    };
-                    Row(kv.Value, index++, ref travel, ref toggle, false, opt);
-                }
+                if (m.Followed == 0) GUILayout.Label("You follow nobody. Click \"Players\" to choose.", _placeholder);
+                else if (m.Trips.Count == 0) GUILayout.Label("No trips yet.", _placeholder);
+                for (int i = 0; i < m.Trips.Count; i++) Row(m.Trips[i].Value, index++, ref travel, ref toggle, false, m.TripOpts[i]);
             }
             EndMovable(key, h);
             GUILayout.Space(collapsed ? 2 : 6);
@@ -640,10 +565,10 @@ namespace Portaler
         }
 
         /// <summary>Favorites group: like any group, but rows have a handle to drag them into a new order.</summary>
-        private static void FavGroup(List<PortalInfo> items, ref int index, ref PortalInfo travel, ref PortalInfo toggle)
+        private static void FavGroup(List<PortalInfo> items, string title, ref int index, ref PortalInfo travel, ref PortalInfo toggle)
         {
             const string key = "FAV";
-            bool collapsed = GroupHeader(key, $"Favorites  ({items.Count})", true, 0f, out var h, out _);
+            bool collapsed = GroupHeader(key, title, true, 0f, out var h, out _);
             var ev = Event.current;
             if (collapsed) { index += items.Count; EndMovable(key, h); GUILayout.Space(2); return; }
 
@@ -746,9 +671,9 @@ namespace Portaler
                 {
                     DrawRowDecor(r, p, handle, false, opt);
                     if (opt?.Tag != null)
-                        _distTag.Draw(r, new GUIContent(opt.Tag), false, false, false, false);
+                        _distTag.Draw(r, Tmp(opt.Tag), false, false, false, false);
                     else if (Prefs.SortMode == "Distance")
-                        _distTag.Draw(r, new GUIContent(DistanceText(p)), false, false, false, false);
+                        _distTag.Draw(r, Tmp(DistanceOf(p)), false, false, false, false);
                 }
             }
         }
@@ -808,7 +733,7 @@ namespace Portaler
                 GUI.DrawTexture(lr, opt.Lead, ScaleMode.ScaleToFit, true);
                 GUI.color = keep;
                 if (!string.IsNullOrEmpty(opt.LeadText))
-                    _avatarText.Draw(lr, new GUIContent(opt.LeadText), false, false, false, false);
+                    _avatarText.Draw(lr, Tmp(opt.LeadText), false, false, false, false);
                 x += HandleW;
             }
             DrawStar(new Rect(x, r.y + (r.height - StarSize) / 2f, StarSize, StarSize), PortalClient.GetFav(p));
@@ -824,12 +749,12 @@ namespace Portaler
         {
             bool here = kind == "here";
             bool slot = handle || opt?.Lead != null;
-            GUI.DrawTexture(r, RowTexture((int)r.width, (int)r.height, kind, index));
+            DrawBoard(r, kind, index);
             DrawRowDecor(r, p, handle, here, opt);
             var st = here ? HereStyle(p, slot) : RowStyle(p, slot);
-            st.Draw(r, new GUIContent(Highlight(p.DisplayName)), false, false, false, false);
-            if (here) _hereTag.Draw(r, new GUIContent("you are here"), false, false, false, false);
-            else if (opt?.Tag != null) _distTag.Draw(r, new GUIContent(opt.Tag), false, false, false, false);
+            st.Draw(r, Tmp(Highlight(p.DisplayName)), false, false, false, false);
+            if (here) _hereTag.Draw(r, Tmp("you are here"), false, false, false, false);
+            else if (opt?.Tag != null) _distTag.Draw(r, Tmp(opt.Tag), false, false, false, false);
         }
 
         // ---------- players window ("Players: n of m" in the trips title) ----------
@@ -850,7 +775,7 @@ namespace Portaler
 
         private static void PlayersInput(Event ev)
         {
-            var known = PortalClient.KnownPlayers();
+            var known = _model != null ? _model.Known : PortalClient.KnownPlayers();
             var pr = PlayersRect(known.Count);
             if (ev.type == EventType.KeyDown && ev.keyCode == KeyCode.Escape) { _playersOpen = false; ev.Use(); return; }
             if (ev.type == EventType.MouseDown)
@@ -879,11 +804,11 @@ namespace Portaler
 
         private static void DrawPlayers(Event ev)
         {
-            var known = PortalClient.KnownPlayers();
+            var known = _model != null ? _model.Known : PortalClient.KnownPlayers();
             var pr = PlayersRect(known.Count);
-            GUI.DrawTexture(pr, RowTexture((int)pr.width, (int)pr.height, "picker", 0));
-            _pickerTitle.Draw(new Rect(pr.x + 16f, pr.y + 10f, pr.width - 32f, 26f), new GUIContent("Show trips of"), false, false, false, false);
-            _placeholder.Draw(new Rect(pr.x + 16f, pr.y + 34f, pr.width - 32f, 22f), new GUIContent("Pick the players you want to follow. Only for you."), false, false, false, false);
+            DrawBoard(pr, "picker", 0);
+            _pickerTitle.Draw(new Rect(pr.x + 16f, pr.y + 10f, pr.width - 32f, 26f), Tmp("Show trips of"), false, false, false, false);
+            _placeholder.Draw(new Rect(pr.x + 16f, pr.y + 34f, pr.width - 32f, 22f), Tmp("Pick the players you want to follow. Only for you."), false, false, false, false);
             var done = PlayersDone(pr);
             for (int i = 0; i < known.Count; i++)
             {
@@ -891,7 +816,7 @@ namespace Portaler
                 if (row.yMax > done.y - 4f) break;
                 bool on = PortalClient.IsTracked(known[i].Key);
                 bool hover = row.Contains(ev.mousePosition);
-                GUI.DrawTexture(row, RowTexture((int)row.width, (int)row.height, hover ? "sort-hover" : "sort", i));
+                DrawBoard(row, hover ? "sort-hover" : "sort", i);
                 // check box
                 var cb = new Rect(row.x + 10f, row.y + (row.height - 22f) / 2f, 22f, 22f);
                 GUI.DrawTexture(cb, _checkBox);
@@ -902,20 +827,20 @@ namespace Portaler
                 GUI.color = PlayerColor(known[i].Key);
                 GUI.DrawTexture(badge, _disc);
                 GUI.color = old;
-                _avatarText.Draw(badge, new GUIContent(known[i].Key.Substring(0, 1).ToUpperInvariant()), false, false, false, false);
-                _playerName.Draw(new Rect(badge.xMax + 10f, row.y, row.width - 160f, row.height), new GUIContent(known[i].Key), false, false, false, false);
+                _avatarText.Draw(badge, Tmp(known[i].Key.Substring(0, 1).ToUpperInvariant()), false, false, false, false);
+                _playerName.Draw(new Rect(badge.xMax + 10f, row.y, row.width - 160f, row.height), Tmp(known[i].Key), false, false, false, false);
                 // online dot
                 bool online = known[i].Value;
-                _distTag.Draw(row, new GUIContent(online ? "online" : "offline"), false, false, false, false);
-                float tw = _distTag.CalcSize(new GUIContent(online ? "online" : "offline")).x;
+                _distTag.Draw(row, Tmp(online ? "online" : "offline"), false, false, false, false);
+                float tw = _distTag.CalcSize(Tmp(online ? "online" : "offline")).x;
                 GUI.color = online ? new Color32(110, 210, 90, 255) : new Color32(130, 120, 110, 255);
                 GUI.DrawTexture(new Rect(row.xMax - tw - 14f, row.center.y - 4f, 9f, 9f), _disc);
                 GUI.color = old;
             }
             if (known.Count == 0)
-                _placeholder.Draw(new Rect(pr.x + 16f, pr.y + 70f, pr.width - 32f, 30f), new GUIContent("Nobody else has played here yet."), false, false, false, false);
-            GUI.DrawTexture(done, RowTexture((int)done.width, (int)done.height, done.Contains(ev.mousePosition) ? "close-hover" : "close", 0));
-            _closeText.Draw(done, new GUIContent("Done"), false, false, false, false);
+                _placeholder.Draw(new Rect(pr.x + 16f, pr.y + 70f, pr.width - 32f, 30f), Tmp("Nobody else has played here yet."), false, false, false, false);
+            DrawBoard(done, done.Contains(ev.mousePosition) ? "close-hover" : "close", 0);
+            _closeText.Draw(done, Tmp("Done"), false, false, false, false);
         }
 
         // ---------- category filter ----------
@@ -987,18 +912,18 @@ namespace Portaler
         private static void DrawPicker(Event ev)
         {
             var pr = PickerRect();
-            GUI.DrawTexture(pr, RowTexture((int)pr.width, (int)pr.height, "picker", 0));
-            _pickerTitle.Draw(new Rect(pr.x + 16f, pr.y + 10f, pr.width - 32f, 26f), new GUIContent($"Category for \"{_picker.DisplayName}\""), false, false, false, false);
-            _placeholder.Draw(new Rect(pr.x + 16f, pr.y + 34f, pr.width - 32f, 22f), new GUIContent("Same for everyone on the server. Esc closes."), false, false, false, false);
+            DrawBoard(pr, "picker", 0);
+            _pickerTitle.Draw(new Rect(pr.x + 16f, pr.y + 10f, pr.width - 32f, 26f), Tmp($"Category for \"{_picker.DisplayName}\""), false, false, false, false);
+            _placeholder.Draw(new Rect(pr.x + 16f, pr.y + 34f, pr.width - 32f, 22f), Tmp("Same for everyone on the server. Esc closes."), false, false, false, false);
             for (int c = 0; c < Categories.Count; c++)
             {
                 var t = PickerTile(pr, c);
                 bool on = _picker.Category == c;
                 bool hover = t.Contains(ev.mousePosition);
-                GUI.DrawTexture(t, RowTexture((int)t.width, (int)t.height, on ? "sort-on" : hover ? "sort-hover" : "sort", c));
+                DrawBoard(t, on ? "sort-on" : hover ? "sort-hover" : "sort", c);
                 if (c > 0) GUI.DrawTexture(new Rect(t.center.x - 17f, t.y + 10f, 34f, 34f), _catIcons[c], ScaleMode.ScaleToFit, true);
-                else _pickerX.Draw(new Rect(t.x, t.y + 6f, t.width, 40f), new GUIContent("x"), false, false, false, false);
-                _sortText.Draw(new Rect(t.x, t.y + 48f, t.width, 28f), new GUIContent(Categories.Names[c]), false, false, false, false);
+                else _pickerX.Draw(new Rect(t.x, t.y + 6f, t.width, 40f), Tmp("x"), false, false, false, false);
+                _sortText.Draw(new Rect(t.x, t.y + 48f, t.width, 28f), Tmp(Categories.Names[c]), false, false, false, false);
             }
         }
 
@@ -1040,32 +965,198 @@ namespace Portaler
             if (ev.type == EventType.Repaint)
             {
                 bool hover = r.Contains(ev.mousePosition);
-                GUI.DrawTexture(r, RowTexture((int)r.width, (int)r.height, hover ? kind + "-hover" : kind, index));
+                DrawBoard(r, hover ? HoverKind(kind) : kind, index);
             }
             return GUI.Button(r, text, textStyle);
         }
 
         // ---------- textures (generated once per size) ----------
 
-        private static Texture2D PanelTexture(int w, int h)
+        // ---------- what the list shows (built once, reused until something changes) ----------
+
+        private sealed class BiomeGroup { public string Key, Title; public List<PortalInfo> Items; }
+
+        private sealed class Model
         {
-            if (_panelTex == null || _panelSize.x != w || _panelSize.y != h)
-            {
-                if (_panelTex != null) Object.Destroy(_panelTex);
-                _panelTex = Art.Wood(w, h, 14f, PanelFill, PanelFrame, 7, 2.5f);
-                _panelSize = new Vector2Int(w, h);
-            }
-            return _panelTex;
+            public string Search = "";
+            public bool Filtering;
+            public List<PortalInfo> All, Favs, Sorted, Backs, Last;
+            public List<BiomeGroup> Biomes;
+            public List<KeyValuePair<string, bool>> Known;
+            public List<KeyValuePair<PortalClient.TripInfo, PortalInfo>> Trips;
+            public List<RowOpt> BackOpts, TripOpts;
+            public List<string> Order;
+            public Dictionary<ZDOID, string> Dist;
+            public string MatchLine, AllTitle, FavTitle, PlayersButton;
+            public float PlayersButtonW;
+            public int Followed;
         }
 
-        private static Texture2D RowTexture(int w, int h, string kind, int index)
-        {
-            int v = Mathf.Abs(index) % Variants;
-            string key = $"{kind}|{w}|{h}|{v}";
-            if (RowTex.TryGetValue(key, out var tex) && tex != null) return tex;
-            if (RowTex.Count > 64) { foreach (var t in RowTex.Values) if (t != null) Object.Destroy(t); RowTex.Clear(); }
+        private static Model _model;
+        private static string _mSearch;
+        private static int _mCat = -1, _mData = -1, _mPrefs = -1;
+        private static string _mSort;
+        private static bool _mRev;
+        private static ZDOID _mSource;
+        private static float _mTime;
+        private const float ModelMaxAge = 0.5f; // "x min ago", online dots and distances refresh this often
 
-            Color fill = RowFill, frame = RowFrame;
+        /// <summary>
+        /// The sorted, grouped and filtered lists for this frame. Rebuilt only at the start of a layout pass
+        /// (so layout and repaint always see the same rows) and only when something changed, or every half second.
+        /// </summary>
+        private static Model GetModel(Event ev)
+        {
+            string q = (_search ?? "").Trim();
+            bool changed = _model == null || q != _mSearch || _catFilter != _mCat || Prefs.SortMode != _mSort || Prefs.SortReversed != _mRev
+                           || PortalClient.DataVersion != _mData || Prefs.Version != _mPrefs || PortalClient.SourceId != _mSource
+                           || Time.unscaledTime - _mTime > ModelMaxAge;
+            if (_model != null && (!changed || ev.type != EventType.Layout)) return _model;
+
+            _mSearch = q; _mCat = _catFilter; _mSort = Prefs.SortMode; _mRev = Prefs.SortReversed;
+            _mData = PortalClient.DataVersion; _mPrefs = Prefs.Version; _mSource = PortalClient.SourceId; _mTime = Time.unscaledTime;
+
+            var m = new Model { Search = q };
+            var everything = PortalClient.Portals;
+            m.Filtering = q.Length > 0 || _catFilter > 0;
+            if (m.Filtering)
+            {
+                m.All = new List<PortalInfo>();
+                foreach (var p in everything)
+                    if ((q.Length == 0 || p.DisplayName.IndexOf(q, System.StringComparison.OrdinalIgnoreCase) >= 0)
+                        && (_catFilter == 0 || p.Category == _catFilter)) m.All.Add(p);
+                string what = q.Length > 0 && _catFilter > 0 ? $"\"{q}\" + {Categories.Names[_catFilter]}"
+                            : q.Length > 0 ? $"\"{q}\"" : Categories.Names[_catFilter];
+                m.MatchLine = $"{m.All.Count} of {everything.Count} portals match {what}";
+            }
+            else m.All = everything;
+            m.AllTitle = $"All portals  ({m.All.Count})";
+
+            bool rev = Prefs.SortReversed;
+            var byName = System.StringComparer.OrdinalIgnoreCase;
+            Vector3 here = PortalClient.SourcePosition;
+            switch (Prefs.SortMode)
+            {
+                case "Name":
+                    m.Sorted = rev ? m.All.OrderByDescending(p => p.DisplayName, byName).ToList() : m.All.OrderBy(p => p.DisplayName, byName).ToList();
+                    break;
+                case "Distance":
+                    m.Sorted = rev ? m.All.OrderByDescending(p => Utils.DistanceXZ(p.Position, here)).ToList()
+                                   : m.All.OrderBy(p => Utils.DistanceXZ(p.Position, here)).ToList();
+                    m.Dist = new Dictionary<ZDOID, string>();
+                    foreach (var p in m.All) m.Dist[p.Id] = DistanceText(p);
+                    break;
+                default:
+                    // Deep North first ... Meadows last ("Other" always at the end). Reversed: Meadows first.
+                    m.Biomes = new List<BiomeGroup>();
+                    foreach (var g in m.All.GroupBy(p => p.BiomeCode)
+                                 .OrderBy(g => g.Key == "XX" ? 1 : 0)
+                                 .ThenBy(g => rev ? Biomes.SortIndex(g.Key) : -Biomes.SortIndex(g.Key)))
+                    {
+                        var entry = Biomes.Order.FirstOrDefault(b => b.Code == g.Key);
+                        string title = string.IsNullOrEmpty(entry.Display) ? g.Key : entry.Display;
+                        var items = g.OrderBy(p => p.DisplayName, byName).ToList();
+                        m.Biomes.Add(new BiomeGroup { Key = g.Key, Title = $"{title}  ({items.Count})", Items = items });
+                    }
+                    break;
+            }
+
+            m.Favs = PortalClient.OrderedFavorites(m.All);
+            m.FavTitle = $"Favorites  ({m.Favs.Count})";
+            m.Order = Prefs.GetGroupOrder();
+            m.Last = PortalClient.LastBuilt;
+
+            m.Backs = PortalClient.BackPortals;
+            m.BackOpts = new List<RowOpt>();
+            for (int i = 0; i < m.Backs.Count; i++)
+                m.BackOpts.Add(new RowOpt
+                {
+                    Kind = i == 0 ? "back" : "back2",
+                    Lead = _backIcon,
+                    LeadTint = i == 0 ? Color.white : new Color(1f, 1f, 1f, 0.7f),
+                    Tag = i == 0 ? "previous portal" : $"{i + 1} trips ago",
+                    Inset = 4f,
+                    Glow = i == 0,
+                });
+
+            m.Known = PortalClient.KnownPlayers();
+            m.Followed = m.Known.Count(k => PortalClient.IsTracked(k.Key));
+            m.PlayersButton = $"Players: {m.Followed} of {m.Known.Count}";
+            m.PlayersButtonW = _smallText.CalcSize(Tmp(m.PlayersButton)).x + 34f;
+            m.PlayersButton += "     "; // room for the arrow
+            m.Trips = PortalClient.TrackedTrips();
+            m.TripOpts = new List<RowOpt>();
+            foreach (var kv in m.Trips)
+            {
+                string name = kv.Key.Name ?? "?";
+                m.TripOpts.Add(new RowOpt
+                {
+                    Lead = _disc,
+                    LeadTint = PlayerColor(name),
+                    LeadText = name.Length > 0 ? name.Substring(0, 1).ToUpperInvariant() : "?",
+                    Tag = $"{name}, {Ago(kv.Key.AgeSeconds)}",
+                });
+            }
+            _model = m;
+            return m;
+        }
+
+        private static string DistanceOf(PortalInfo p) =>
+            _model?.Dist != null && _model.Dist.TryGetValue(p.Id, out var d) ? d : DistanceText(p);
+
+        // ---------- small helpers that avoid garbage every frame ----------
+
+        private static readonly GUIContent TmpContent = new GUIContent();
+        /// <summary>One reusable GUIContent for drawing and measuring (used right away, never kept).</summary>
+        private static GUIContent Tmp(string text) { TmpContent.text = text; TmpContent.image = null; TmpContent.tooltip = null; return TmpContent; }
+
+        private static readonly RectOffset ThumbBorder = new RectOffset(2, 2, 2, 2);
+        private static string _hintText;
+        private static KeyCode _hintRename, _hintCategory;
+
+        private static string HintText()
+        {
+            if (_hintText == null || _hintRename != Plugin.RenameKey.Value || _hintCategory != Plugin.CategoryKey.Value)
+            {
+                _hintRename = Plugin.RenameKey.Value; _hintCategory = Plugin.CategoryKey.Value;
+                _hintText = $"Click a name or a map pin to travel. {_hintRename} = rename, {_hintCategory} = category.\nRight click = favorite. Drag favorites and group titles by their handle.";
+            }
+            return _hintText;
+        }
+
+        private static readonly Dictionary<string, string> HoverKinds = new Dictionary<string, string>();
+        private static string HoverKind(string kind)
+        {
+            if (!HoverKinds.TryGetValue(kind, out var h)) HoverKinds[kind] = h = kind + "-hover";
+            return h;
+        }
+
+        // ---------- textures: made on a background thread, kept until unused for a while ----------
+
+        private struct TexKey : System.IEquatable<TexKey>
+        {
+            public string Kind; public int W, H, V;
+            public bool Equals(TexKey o) => W == o.W && H == o.H && V == o.V && string.Equals(Kind, o.Kind);
+            public override bool Equals(object o) => o is TexKey k && Equals(k);
+            public override int GetHashCode() => ((Kind?.GetHashCode() ?? 0) * 397 ^ W * 31 ^ H * 17 ^ V);
+        }
+
+        private sealed class TexEntry
+        {
+            public Texture2D Tex;
+            public System.Threading.Tasks.Task<Color32[]> Job;
+            public int W, H, LastUsed;
+        }
+
+        private static readonly Dictionary<TexKey, TexEntry> RowTex = new Dictionary<TexKey, TexEntry>();
+        private const int MaxTextures = 300;          // plenty for every board size in use; the oldest unused go first
+        private const int SyncPixels = 6000;          // small boards (buttons) are made right away
+        private static TexEntry _panel;
+        private static int _panelW, _panelH;
+
+        private static void KindColours(string kind, out Color fill, out Color frame)
+        {
+            fill = RowFill; frame = RowFrame;
             switch (kind)
             {
                 case "row-hover": fill = HoverFill; frame = HoverFrame; break;
@@ -1083,9 +1174,102 @@ namespace Portaler
                 case "picker": fill = new Color32(96, 66, 45, 255); frame = PanelFrame; break;
                 case "sort-on": case "sort-on-hover": fill = CloseHoverFill; frame = HoverFrame; break;
             }
-            tex = Art.Wood(w, h, 5f, fill, frame, 11 + v * 17, 1.6f);
-            RowTex[key] = tex;
-            return tex;
+        }
+
+        /// <summary>The finished texture, or null while it is still being made.</summary>
+        private static Texture2D Finish(TexEntry e)
+        {
+            e.LastUsed = Time.frameCount;
+            if (e.Tex == null && e.Job != null && e.Job.IsCompleted)
+            {
+                if (e.Job.Status == System.Threading.Tasks.TaskStatus.RanToCompletion) e.Tex = Art.ToTexture(e.Job.Result, e.W, e.H);
+                else Plugin.Log.LogWarning("Board texture failed: " + e.Job.Exception?.GetBaseException().Message);
+                e.Job = null;
+            }
+            return e.Tex;
+        }
+
+        private static TexEntry Request(int w, int h, float frameW, Color fill, Color frame, int seed, float rough)
+        {
+            w = Mathf.Max(8, w); h = Mathf.Max(8, h);
+            var e = new TexEntry { W = w, H = h, LastUsed = Time.frameCount };
+            if (w * h <= SyncPixels) e.Tex = Art.ToTexture(Art.WoodPixels(w, h, frameW, fill, frame, seed, rough), w, h);
+            else e.Job = System.Threading.Tasks.Task.Run(() => Art.WoodPixels(w, h, frameW, fill, frame, seed, rough));
+            return e;
+        }
+
+        private static Texture2D RowTexture(int w, int h, string kind, int index)
+        {
+            int v = Mathf.Abs(index) % Variants;
+            var key = new TexKey { Kind = kind, W = w, H = h, V = v };
+            if (!RowTex.TryGetValue(key, out var e))
+            {
+                if (RowTex.Count >= MaxTextures) EvictOldest();
+                KindColours(kind, out var fill, out var frame);
+                RowTex[key] = e = Request(w, h, 5f, fill, frame, 11 + v * 17, 1.6f);
+            }
+            return Finish(e);
+        }
+
+        private static void EvictOldest()
+        {
+            TexKey oldest = default; int best = int.MaxValue; bool found = false;
+            foreach (var kv in RowTex)
+                if (kv.Value.Job == null && kv.Value.LastUsed < best) { best = kv.Value.LastUsed; oldest = kv.Key; found = true; }
+            if (!found) return;
+            if (RowTex[oldest].Tex != null) Object.Destroy(RowTex[oldest].Tex);
+            RowTex.Remove(oldest);
+        }
+
+        /// <summary>Wooden board; a plain board in the same colours for the frame or two its texture is still being made.</summary>
+        private static void DrawBoard(Rect r, string kind, int index)
+        {
+            var tex = RowTexture((int)r.width, (int)r.height, kind, index);
+            if (tex != null) { GUI.DrawTexture(r, tex); return; }
+            KindColours(kind, out var fill, out var frame);
+            DrawPlain(r, fill, frame, 2f);
+        }
+
+        private static void DrawPlain(Rect r, Color fill, Color frame, float border)
+        {
+            var old = GUI.color;
+            GUI.color = new Color(frame.r, frame.g, frame.b, old.a);
+            GUI.DrawTexture(r, Texture2D.whiteTexture);
+            GUI.color = new Color(fill.r, fill.g, fill.b, old.a);
+            GUI.DrawTexture(new Rect(r.x + border, r.y + border, r.width - 2 * border, r.height - 2 * border), Texture2D.whiteTexture);
+            GUI.color = old;
+        }
+
+        private static void RequestPanel(int w, int h)
+        {
+            if (_panel != null && _panelW == w && _panelH == h) return;
+            if (_panel?.Tex != null) Object.Destroy(_panel.Tex);
+            _panelW = w; _panelH = h;
+            _panel = Request(w, h, 14f, PanelFill, PanelFrame, 7, 2.5f);
+        }
+
+        private static void DrawPanel(Rect r)
+        {
+            RequestPanel((int)r.width, (int)r.height);
+            var tex = Finish(_panel);
+            if (tex != null) GUI.DrawTexture(r, tex);
+            else DrawPlain(r, PanelFill, PanelFrame, 6f);
+        }
+
+        private static bool _warm;
+
+        /// <summary>
+        /// Right after the character spawns: fonts, styles and the big list panel (made on a background thread),
+        /// so the first time the map opens at a portal is as quick as every other time.
+        /// </summary>
+        private static void Prewarm()
+        {
+            _warm = true;
+            var sw = System.Diagnostics.Stopwatch.StartNew();
+            EnsureStyles();
+            RequestPanel((int)_width, (int)Mathf.Max(300f, Screen.height - 80f - 70f));
+            try { FlowLine.Prewarm(Minimap.instance); } catch (System.Exception e) { Plugin.Log.LogWarning("Line prewarm: " + e.Message); }
+            if (Perf.On) Plugin.Log.LogInfo($"[Perf] Prewarm after spawn: {sw.Elapsed.TotalMilliseconds:0} ms (panel texture continues in the background)");
         }
 
         private static void EnsureStyles()
@@ -1184,7 +1368,7 @@ namespace Portaler
             _glowStyle.normal.background = Art.RectGlow(new Color(1f, 0.78f, 0.3f, 0.9f), 8);
 
             // Wide enough for a 25 character name (+ star, arrow, distance tag, padding, frame, scrollbar).
-            float nameWidth = _rowText.CalcSize(new GUIContent(new string('M', NameChars))).x;
+            float nameWidth = _rowText.CalcSize(Tmp(new string('M', NameChars))).x;
             _width = Mathf.Clamp(nameWidth + 200f, 520f, Screen.width * 0.45f);
         }
 

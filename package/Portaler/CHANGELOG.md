@@ -1,5 +1,12 @@
 # Changelog
 
+## 1.0.13 (developer build, not published)
+- No freeze the first time the map opens: fonts, styles, the fiery line and the big list panel are prepared right after you spawn, and the wooden boards are drawn on a background thread.
+- No more freezes from the board-image cache (it threw everything away when full; now only the oldest unused images go).
+- The list builds its rows once and reuses them (rebuilt only when something changes, or every half second): much less work and memory garbage per frame.
+- New option `[Travel] QuickArrival` (on): trips through Portaler move you as soon as the screen is dark and end as soon as the target area is loaded, instead of the game's fixed 2 s + at least 8 s. Off automatically with Fast Teleport.
+- Performance log also measures the destination click on its own (click, map close, teleport start).
+
 ## 1.0.12 (developer build, not published)
 - Performance log for measuring: Portaler's own time and memory per frame, and how long each teleport takes (click, moved, area ready, arrived). Written to the BepInEx log every 10 seconds.
 - Normal builds have it off; switch it on with `[Debug] PerfLog = true`.

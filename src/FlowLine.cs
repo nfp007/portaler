@@ -101,6 +101,17 @@ namespace Portaler
             PortalClient.SetOnTop(_root.gameObject, 5); // above other mods' pins and labels, below our pins
         }
 
+        /// <summary>Create all dots up front (right after spawn), so the first preview does not stutter.</summary>
+        public static void Prewarm(Minimap map)
+        {
+            if (map == null || map.m_pinRootLarge == null) return;
+            EnsureRoot(map);
+            EnsureDots(MaxDots);
+            foreach (var d in Core) d.enabled = false;
+            foreach (var d in Glow) d.enabled = false;
+            _root.gameObject.SetActive(false);
+        }
+
         public static void Hide()
         {
             if (_root != null && _root.gameObject.activeSelf) _root.gameObject.SetActive(false);

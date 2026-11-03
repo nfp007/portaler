@@ -138,6 +138,28 @@ namespace Portaler
         public static Texture2D Wood(int w, int h, float frame, Color fill, Color frameCol, int seed, float rough)
         {
             w = Mathf.Max(8, w); h = Mathf.Max(8, h);
+            return ToTexture(WoodPixels(w, h, frame, fill, frameCol, seed, rough), w, h);
+        }
+
+        /// <summary>Texture from pixels made by <see cref="WoodPixels"/> (main thread only).</summary>
+        public static Texture2D ToTexture(Color32[] px, int w, int h)
+        {
+            var tex = new Texture2D(w, h, TextureFormat.RGBA32, false);
+            tex.SetPixels32(px);
+            tex.Apply();
+            tex.filterMode = FilterMode.Bilinear;
+            tex.wrapMode = TextureWrapMode.Clamp;
+            tex.hideFlags = HideFlags.HideAndDontSave;
+            return tex;
+        }
+
+        /// <summary>
+        /// The pixels of a wooden board. Pure maths, no Unity objects: safe to run on a background thread,
+        /// so big boards (the list panel) are made without freezing the game.
+        /// </summary>
+        public static Color32[] WoodPixels(int w, int h, float frame, Color fill, Color frameCol, int seed, float rough)
+        {
+            w = Mathf.Max(8, w); h = Mathf.Max(8, h);
             var px = new Color32[w * h];
             Color frameLight = new Color(Mathf.Min(1f, frameCol.r * 1.25f), Mathf.Min(1f, frameCol.g * 1.22f), Mathf.Min(1f, frameCol.b * 1.18f), 1f);
             Color frameDark = Mul(frameCol, 0.72f, 0.70f, 0.68f);
@@ -180,14 +202,7 @@ namespace Portaler
                     col.a = alpha;
                     px[y * w + x] = Px(col);
                 }
-
-            var tex = new Texture2D(w, h, TextureFormat.RGBA32, false);
-            tex.SetPixels32(px);
-            tex.Apply();
-            tex.filterMode = FilterMode.Bilinear;
-            tex.wrapMode = TextureWrapMode.Clamp;
-            tex.hideFlags = HideFlags.HideAndDontSave;
-            return tex;
+            return px;
         }
 
         /// <summary>Small right-pointing arrow ("you are here").</summary>
