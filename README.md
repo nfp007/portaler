@@ -15,9 +15,9 @@ Built for servers that play together:
 
 Everybody has the same rights: anyone can rename, set categories or change shared favorites. Everything shared is synced through the server and kept with the world save, so it survives restarts and mod updates.
 
-![Portaler next to the map](https://raw.githubusercontent.com/nfp007/portaler/main/docs/overview.jpg)
+## Screenshots
 
-![Search, category filter, sorting by distance and by biome](https://raw.githubusercontent.com/nfp007/portaler/main/docs/screenshots.jpg)
+![Portaler next to the map: the list, the fiery preview line and the portal pins](https://raw.githubusercontent.com/nfp007/portaler/main/docs/hero.jpg)
 
 Source code, issues and ideas: **[github.com/nfp007/portaler](https://github.com/nfp007/portaler)**
 
@@ -32,6 +32,8 @@ Every feature says what is **🌐 shared** (the same for everybody on the server
 - The portal you stand in stays in the list, greyed out with "you are here", and cannot be selected.
 - 🌐 Shared: the list of portals (everybody sees every portal).
 
+![The list sorted by distance, the portal you stand in greyed out](https://raw.githubusercontent.com/nfp007/portaler/main/docs/f-travel.jpg)
+
 **2. Map preview**
 - Rest the mouse on a name: a soft fiery line flows from your portal to it and its pin gets bigger, so you see where the trip goes.
 - Close portals (up to 2 km apart): the map calmly frames **both** portals, with extra room around the target.
@@ -39,11 +41,15 @@ Every feature says what is **🌐 shared** (the same for everybody on the server
 - The map stays there 10 seconds after the mouse leaves the list, then glides back. Move or zoom the map yourself and it stays where you put it.
 - 👤 Personal: only your own map moves. Timing, zoom and the line can be changed in your config.
 
+![The fiery line from your portal to the previewed one](https://raw.githubusercontent.com/nfp007/portaler/main/docs/f-preview.jpg)
+
 **3. Favorites**
 - Right click a name: **mine** (silver star), then **shared** (bigger glowing gold star), then off.
 - Drag favorites by their handle into any order. New favorites go to the end.
 - 🌐 Shared: gold stars. Everybody sees them, and anyone can add or remove them.
 - 👤 Personal: silver stars and the order of your favorites (per character, saved on the server).
+
+![Favorites with drag handles, gold (shared) and silver (personal) stars](https://raw.githubusercontent.com/nfp007/portaler/main/docs/f-favorites.jpg)
 
 **4. Categories & filter**
 - Hover a name and press **T** to choose a category: Base, Mine, Farm, Trader, Boss, Danger, Dungeon or Explore.
@@ -52,10 +58,14 @@ Every feature says what is **🌐 shared** (the same for everybody on the server
 - 🌐 Shared: the category of each portal (anyone can change it).
 - 👤 Personal: which category you are filtering by.
 
+![Category filter showing only bases](https://raw.githubusercontent.com/nfp007/portaler/main/docs/f-categories.jpg)
+
 **5. Search**
 - Click the search box and type: only portals whose name contains the text are shown (any case), matching letters in gold.
 - While typing, the game ignores your keys (no walking, the map stays open). Esc or x clears the search.
 - 👤 Personal: your search (cleared each time you enter a portal).
+
+![Search with the matching letters in gold](https://raw.githubusercontent.com/nfp007/portaler/main/docs/f-search.jpg)
 
 **6. Sorting & foldable groups**
 - **Biome** (default): grouped by biome, Deep North first. Click again for Meadows first.
@@ -65,16 +75,22 @@ Every feature says what is **🌐 shared** (the same for everybody on the server
 - Every block has a handle left of its title: **Back to**, **Favorites**, **Players' last trips**, **Last built** and **All portals** (the biome groups, or the sorted list). Drag them into any order, for example put Last built below all portals.
 - 👤 Personal: sort choice (per PC), folded groups and group order (per character).
 
+![All portals grouped by biome, folded and unfolded](https://raw.githubusercontent.com/nfp007/portaler/main/docs/f-groups.jpg)
+
 **7. "Back to"**
 - The portals you last travelled from, at the top of the list. One click takes you back.
 - The newest one is golden and glows; older ones say "2 trips ago", "3 trips ago".
 - **show 1 2 3** in the title: how many to list.
 - 👤 Personal: the history per character, the number per PC.
 
+![Back to with three portals, the newest one golden](https://raw.githubusercontent.com/nfp007/portaler/main/docs/f-back.jpg)
+
 **8. "Last built"**
 - The newest portals built by anyone on the server.
 - **show 1 2 3 4 5** in the title: how many to list (default 3).
 - 🌐 Shared: the same list for everybody. 👤 Personal: how many you see (per PC).
+
+![Last built showing 5 portals](https://raw.githubusercontent.com/nfp007/portaler/main/docs/f-last.jpg)
 
 **9. "Players' last trips"**
 - The last portal each other player travelled to, with their initial, name and how long ago. Click it to follow them.
@@ -82,11 +98,15 @@ Every feature says what is **🌐 shared** (the same for everybody on the server
 - 🌐 Shared: every player's last trip (stored on the server).
 - 👤 Personal: whom you follow (per character, saved on your PC).
 
+![Choosing whose trips to follow](https://raw.githubusercontent.com/nfp007/portaler/main/docs/f-trips.jpg)
+
 **10. Automatic names & rename from the list**
 - New portals are named after their biome plus a number, for example `BF-007` or `MO-012`. Numbers keep counting up per biome and are never reused.
 - Portals you name yourself, and existing portals, keep their names.
 - Hover a name in the list and press **E** to rename that portal from anywhere in the world (up to 25 characters).
 - 🌐 Shared: portal names (anyone can rename any portal).
+
+![Portals named automatically by biome](https://raw.githubusercontent.com/nfp007/portaler/main/docs/f-names.jpg)
 
 **11. Map pins**
 - Every portal gets a fiery ring pin with its name, and its category icon in a round badge at the lower right.
@@ -94,6 +114,8 @@ Every feature says what is **🌐 shared** (the same for everybody on the server
 - Pins from other mods (for example automatic pin mods) that sit on a portal are hidden, so each portal shows just one icon.
 - While you choose a destination, portal pins, their names and the fiery line are drawn above all other pins and labels, at full brightness.
 - 🌐 Shared: everybody sees the same pins, names and icons.
+
+![A portal pin with its category badge](https://raw.githubusercontent.com/nfp007/portaler/main/docs/f-pins.jpg)
 
 **12. Optional vanilla restrictions**
 - By default every item can travel, metals included.

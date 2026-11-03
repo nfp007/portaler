@@ -1,5 +1,8 @@
 # Changelog
 
+## 1.0.11
+- New screenshots: one large overview, and a small picture with every feature in the description.
+
 ## 1.0.10
 - Updated mod description and README introduction to cover all current features.
 
