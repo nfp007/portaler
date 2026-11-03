@@ -14,6 +14,8 @@ The same DLL runs on the dedicated server and on every client.
 ## Build
 - `dotnet build -c Release` → `bin/Release/Portaler.dll` (offline: `nuget.config` clears sources, references point to `lib/`).
 - After building, check the version with the assembly metadata before packaging.
+- Developer build for measuring: `dotnet build -c Release -p:Dev=true` (performance log always on, zip `Portaler-<ver>-dev.zip`,
+  never uploaded). Normal builds: `[Debug] PerfLog = true`. Measurements, findings and open optimisation ideas: `docs/PERFORMANCE.md`.
 
 ## Versioning and release (every change)
 1. Bump the version in **three** places: `src/Plugin.cs` (`Version`), `Portaler.csproj` (`<Version>`), `package/Portaler/manifest.json` (`version_number`).

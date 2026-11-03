@@ -1,15 +1,13 @@
 # Changelog
 
-## 1.0.13 (developer build, not published)
-- No freeze the first time the map opens: fonts, styles, the fiery line and the big list panel are prepared right after you spawn, and the wooden boards are drawn on a background thread.
-- No more freezes from the board-image cache (it threw everything away when full; now only the oldest unused images go).
-- The list builds its rows once and reuses them (rebuilt only when something changes, or every half second): much less work and memory garbage per frame.
-- New option `[Travel] QuickArrival` (on): trips through Portaler move you as soon as the screen is dark and end as soon as the target area is loaded, instead of the game's fixed 2 s + at least 8 s. Off automatically with Fast Teleport.
-- Performance log also measures the destination click on its own (click, map close, teleport start).
-
-## 1.0.12 (developer build, not published)
-- Performance log for measuring: Portaler's own time and memory per frame, and how long each teleport takes (click, moved, area ready, arrived). Written to the BepInEx log every 10 seconds.
-- Normal builds have it off; switch it on with `[Debug] PerfLog = true`.
+## 1.0.13
+- **Quick arrival** (new, on by default, `[Travel] QuickArrival`): trips through Portaler skip the game's fixed waits (2 s before moving, at least 8 s in total). You are moved as soon as the screen is dark and arrive as soon as the target area is loaded. Measured: 4-6 s instead of 8.6-10.5 s. Vanilla portals and dungeons are not changed; off automatically when Fast Teleport is installed.
+- Smoother list: no freeze the first time the map opens (it was up to 2 s; fonts, styles and the big panel are now prepared right after you spawn, the wooden boards are drawn on a background thread).
+- No more short freezes from the board-image cache (it threw everything away when it was full; now only the oldest unused images go).
+- The list sorts and groups once and reuses it, instead of several times every frame.
+- New default block order for new characters: Back to, Players' last trips, Favorites, Last built, All portals.
+- New setting `[Debug] PerfLog` (off): writes Portaler's own time and memory use and the timing of every trip to the BepInEx log, for troubleshooting.
+- Nothing changed on the server side (updating it too keeps every machine on the same version).
 
 ## 1.0.11
 - New screenshots: one large overview, and a small picture with every feature in the description.

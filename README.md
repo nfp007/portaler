@@ -11,6 +11,7 @@ Built for servers that play together:
 - **Back to**: your last 1-3 departure portals, one click away.
 - **Last built**: the newest portals on the server.
 - **Search, sorting** (biome, name, distance), foldable groups and blocks you can drag into your own order.
+- **Quick arrival**: you arrive as soon as the target area is loaded, often in half the game's usual time.
 - **Automatic names** by biome (`BF-007`, `MO-012`) and renaming any portal right from the list.
 
 Everybody has the same rights: anyone can rename, set categories or change shared favorites. Everything shared is synced through the server and kept with the world save, so it survives restarts and mod updates.
@@ -117,7 +118,14 @@ Every feature says what is **🌐 shared** (the same for everybody on the server
 
 ![A portal pin with its category badge](https://raw.githubusercontent.com/nfp007/portaler/main/docs/f-pins.jpg)
 
-**12. Optional vanilla restrictions**
+**12. Quick arrival**
+- The game's own teleport always waits 2 seconds before it moves you and at least 8 seconds in total, even when the target area is already loaded.
+- Trips through Portaler skip those fixed waits: you are moved as soon as the screen is dark, and you arrive as soon as the target area is loaded and there is ground under you.
+- Measured: trips that took 8.6-10.5 s now take 4-6 s. Areas that load slowly still take as long as they need: you never arrive before the area is ready, and the game's own safety (15 s) still applies.
+- Only Portaler trips are affected; vanilla portals and dungeon entrances stay as they are. If [Fast Teleport](https://www.nexusmods.com/valheim/mods/1774) is installed, Portaler leaves the timing to it.
+- 👤 Personal: on by default, `[Travel] QuickArrival` in your config.
+
+**13. Optional vanilla restrictions**
 - By default every item can travel, metals included.
 - Prefer the game's own rules? Switch on `VanillaRestrictions` on the server (see Configuration).
 - 🌐 Shared: the server decides for everybody.
@@ -168,6 +176,8 @@ Config file: `BepInEx/config/nfp007.Portaler.cfg` (created on first start). `[Se
 | `[Map] HoverLine` | `true` | Draw the fiery line from your portal to the previewed one. |
 | `[Map] PinSizePreview` | `1.6` | Size of the previewed portal's pin (1 = normal), as long as the fiery line is shown. |
 | `[Map] PinSizeHover` | `1.3` | Size of a portal pin while the mouse is over it on the map. |
+| `[Travel] QuickArrival` | `true` | Trips through Portaler skip the game's fixed waits (2 s before moving, at least 8 s in total) and end as soon as the target area is loaded. Off automatically when Fast Teleport is installed. |
+| `[Debug] PerfLog` | `false` | For troubleshooting: writes Portaler's time and memory use per frame, and the timing of every trip, to the BepInEx log every 10 seconds. |
 | `[Server] VanillaRestrictions` | `false` | `false` = no restrictions, everything travels through every portal. `true` = the game's own rules: no metals/ores through the wooden portal, and the world modifiers "no portals" and "no portals during boss fights" apply. |
 
 Everything else is set from inside the game:
