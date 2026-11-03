@@ -346,12 +346,14 @@ namespace Portaler
 
         public static void Tick()
         {
-            if (_pinsDirty) RefreshPins();
+            if (_pinsDirty) { var pt = Perf.Begin(); RefreshPins(); Perf.End(Perf.S.PinRefresh, pt); }
             UpdateRename();
             if (Time.time >= _nextForeignScan)
             {
                 _nextForeignScan = Time.time + 0.5f;
+                var st = Perf.Begin();
                 ReskinForeignPins();
+                Perf.End(Perf.S.PinScan, st);
             }
             if (!Active) { _hoverPortal = null; _hoverSince = 0f; StopGlow(); _saved = false; FlowLine.Hide(); return; }
 
@@ -585,7 +587,12 @@ namespace Portaler
 
             // fiery line from the portal we stand in to the previewed one
             var target = _glowId != ZDOID.None ? Portals.FirstOrDefault(p => p.Id == _glowId) : null;
-            if (target != null && target.Id != SourceId && Plugin.HoverLine.Value) FlowLine.Show(map, SourcePosition, target.Position);
+            if (target != null && target.Id != SourceId && Plugin.HoverLine.Value)
+            {
+                var lt = Perf.Begin();
+                FlowLine.Show(map, SourcePosition, target.Position);
+                Perf.End(Perf.S.Line, lt);
+            }
             else FlowLine.Hide();
         }
 
@@ -654,6 +661,7 @@ namespace Portaler
             // tell the server (and so everybody) where we went: "Players' last trips"
             if (ZRoutedRpc.instance != null && LocalPlayerId != 0)
                 ZRoutedRpc.instance.InvokeRoutedRPC(PortalServer.RpcTrip, LocalPlayerId, player.GetPlayerName(), target.Id);
+            Perf.TeleportStarted(target, exit, Utils.DistanceXZ(SourcePosition, target.Position));
             Deactivate(true);
             player.TeleportTo(exit, target.Rotation, true);
             Plugin.Log.LogInfo($"Teleporting to {target.DisplayName}");

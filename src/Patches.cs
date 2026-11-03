@@ -140,7 +140,12 @@ namespace Portaler
         [HarmonyPatch(typeof(Minimap), "UpdatePins")]
         private static class Minimap_UpdatePins
         {
-            private static void Postfix() => PortalClient.HideForeignPins();
+            private static void Postfix()
+            {
+                var t = Perf.Begin();
+                PortalClient.HideForeignPins();
+                Perf.End(Perf.S.Hide, t);
+            }
         }
     
         /// <summary>While typing in the search box the game must not react to keys (walking, map, chat...).</summary>

@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.0.12 (developer build, not published)
+- Performance log for measuring: Portaler's own time and memory per frame, and how long each teleport takes (click, moved, area ready, arrived). Written to the BepInEx log every 10 seconds.
+- Normal builds have it off; switch it on with `[Debug] PerfLog = true`.
+
 ## 1.0.11
 - New screenshots: one large overview, and a small picture with every feature in the description.
 

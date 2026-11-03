@@ -15,7 +15,7 @@ namespace Portaler
     {
         public const string Guid = "nfp007.Portaler";
         public const string Name = "Portaler";
-        public const string Version = "1.0.11";
+        public const string Version = "1.0.12";
 
         internal static Plugin Instance;
         internal static ManualLogSource Log;
@@ -26,6 +26,7 @@ namespace Portaler
         // personal settings (each PC)
         internal static BepInEx.Configuration.ConfigEntry<KeyCode> RenameKey, CategoryKey;
         internal static BepInEx.Configuration.ConfigEntry<bool> HoverShowsMap, HoverReturn, HoverLine;
+        internal static BepInEx.Configuration.ConfigEntry<bool> PerfLog;
         internal static BepInEx.Configuration.ConfigEntry<float> HoverDelay, HoverZoomMeters, HoverReturnDelay, PinSizePreview, PinSizeHover, HoverMaxFitMeters, HoverMoveSeconds;
 
         private Harmony _harmony;
@@ -53,17 +54,23 @@ namespace Portaler
             PinSizePreview = Config.Bind("Map", "PinSizePreview", 1.6f, "Size of the previewed portal's pin on the map (1 = normal). It stays this big as long as the fiery line is shown.");
             PinSizeHover = Config.Bind("Map", "PinSizeHover", 1.3f, "Size of a portal pin while the mouse is over it on the map (1 = normal).");
             HoverLine = Config.Bind("Map", "HoverLine", true, "Draw a fiery line from the portal you stand in to the previewed portal.");
+            PerfLog = Config.Bind("Debug", "PerfLog", false,
+                "Write Portaler's own time and memory use per frame, and how long each teleport takes, to the BepInEx log every 10 seconds.");
             _harmony = new Harmony(Guid);
             _harmony.PatchAll(typeof(Plugin).Assembly);
-            Log.LogInfo($"{Name} {Version} loaded");
+            Log.LogInfo($"{Name} {Version}{(Perf.DevBuild ? " (developer build, performance log on)" : "")} loaded");
         }
 
         private void Update()
         {
             try
             {
+                var t = Perf.Begin();
                 PortalServer.Tick();
+                Perf.End(Perf.S.ServerTick, t);
+                t = Perf.Begin();
                 PortalClient.Tick();
+                Perf.End(Perf.S.ClientTick, t);
             }
             catch (System.Exception e)
             {
@@ -76,8 +83,14 @@ namespace Portaler
         {
             try
             {
+                var t = Perf.Begin();
                 PortalClient.HideForeignPins();
+                Perf.End(Perf.S.Hide, t);
+                t = Perf.Begin();
                 PortalClient.ScalePins();
+                Perf.End(Perf.S.Scale, t);
+                Perf.TeleportTick();
+                Perf.Tick();
             }
             catch (System.Exception e)
             {
@@ -89,7 +102,9 @@ namespace Portaler
         {
             try
             {
+                var t = Perf.Begin();
                 PortalUI.Draw();
+                Perf.End(Perf.S.Gui, t);
             }
             catch (System.Exception e)
             {
