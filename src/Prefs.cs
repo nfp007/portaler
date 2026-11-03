@@ -60,7 +60,7 @@ namespace Portaler
         }
 
         // order of the movable groups, per character
-        public static readonly string[] DefaultGroupOrder = { "BACK", "FAV", "TRIPS", "LAST", "PORTALS" };
+        public static readonly string[] DefaultGroupOrder = { "BACK", "TRIPS", "FAV", "LAST", "PORTALS" };
         private static readonly System.Collections.Generic.Dictionary<string, System.Collections.Generic.List<string>> GroupOrders =
             new System.Collections.Generic.Dictionary<string, System.Collections.Generic.List<string>>();
 

@@ -72,7 +72,7 @@ Every feature says what is **🌐 shared** (the same for everybody on the server
 - **Name**: one list A to Z, or Z to A.
 - **Distance**: nearest first (or farthest first), with the distance shown next to each name.
 - Click a group title to fold or unfold it.
-- Every block has a handle left of its title: **Back to**, **Favorites**, **Players' last trips**, **Last built** and **All portals** (the biome groups, or the sorted list). Drag them into any order, for example put Last built below all portals.
+- Blocks, from the top by default: **Back to**, **Players' last trips**, **Favorites**, **Last built**, **All portals** (the biome groups, or the sorted list). Each has a handle left of its title: drag them into any order, for example put Last built below all portals.
 - 👤 Personal: sort choice (per PC), folded groups and group order (per character).
 
 ![All portals grouped by biome, folded and unfolded](https://raw.githubusercontent.com/nfp007/portaler/main/docs/f-groups.jpg)

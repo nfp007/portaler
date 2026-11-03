@@ -6,7 +6,7 @@ namespace Portaler
 {
     /// <summary>
     /// The portal list shown on the left of the large map while choosing a destination.
-    /// Wooden Valheim-style board: Back to, then Favorites / Players' last trips / Last built (movable), then every portal grouped by biome.
+    /// Wooden Valheim-style board. Default order: Back to, Players' last trips, Favorites, Last built, All portals (all movable).
     /// Left click a name = travel, right click (or click the star) = favorite on/off.
     /// The portal you stand in is greyed out ("you are here") and cannot be chosen.
     /// </summary>
