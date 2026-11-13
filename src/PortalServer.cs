@@ -24,6 +24,8 @@ namespace Portaler
         public const string RpcSetCategory = "Portaler_SetCategory";
         public const string RpcSetFavOrder = "Portaler_SetFavOrder";
         public const string RpcTrip = "Portaler_Trip";
+        public const string RpcSetLink = "Portaler_SetLink";
+        public const string RpcSetColor = "Portaler_SetColor";
 
         private static bool _sentRestrictions;
         private static bool _lastRestrictions;
@@ -48,6 +50,9 @@ namespace Portaler
         private static readonly Dictionary<string, int> Cats = new Dictionary<string, int>();
         // Personal order of favorites per player (portal keys, first = top).
         private static readonly Dictionary<long, List<string>> Order = new Dictionary<long, List<string>>();
+        // One-way links (portal key -> destination key) and portal colours (shared, anyone can change them).
+        private static readonly Dictionary<string, string> Links = new Dictionary<string, string>();
+        private static readonly Dictionary<string, int> Colors = new Dictionary<string, int>();
         // Last portal each player travelled to (shared with everybody): player id -> trip.
         private class Trip { public string Key; public long Time; public string Name; }
         private static readonly Dictionary<long, Trip> Trips = new Dictionary<long, Trip>();
@@ -76,6 +81,8 @@ namespace Portaler
             ZRoutedRpc.instance.Register(RpcSetCategory, new Action<long, ZDOID, int>(OnSetCategory));
             ZRoutedRpc.instance.Register(RpcSetFavOrder, new Action<long, long, ZPackage>(OnSetFavOrder));
             ZRoutedRpc.instance.Register(RpcTrip, new Action<long, long, string, ZDOID>(OnTrip));
+            ZRoutedRpc.instance.Register(RpcSetLink, new Action<long, ZDOID, ZDOID>(OnSetLink));
+            ZRoutedRpc.instance.Register(RpcSetColor, new Action<long, ZDOID, int>(OnSetColor));
             _loaded = false;
             _sentRestrictions = false;
             _lastHash = "";
@@ -224,6 +231,36 @@ namespace Portaler
             _nextScan = 0; // the list (with categories) goes out on the next scan
         }
 
+        /// <summary>Link a portal to one destination (to = ZDOID.None removes the link). Anyone may do it.</summary>
+        private static void OnSetLink(long sender, ZDOID from, ZDOID to)
+        {
+            if (!IsServer) return;
+            EnsureLoaded();
+            string fromKey = KeyOf(from);
+            if (fromKey == null) return;
+            if (to == ZDOID.None) Links.Remove(fromKey);
+            else
+            {
+                string toKey = KeyOf(to);
+                if (toKey == null || toKey == fromKey) return;
+                Links[fromKey] = toKey;
+            }
+            Save();
+            _nextScan = 0; // the list (with links) goes out on the next scan
+        }
+
+        private static void OnSetColor(long sender, ZDOID id, int color)
+        {
+            if (!IsServer) return;
+            EnsureLoaded();
+            string key = KeyOf(id);
+            if (key == null) return;
+            color = PortalColors.Clamp(color);
+            if (color == 0) Colors.Remove(key); else Colors[key] = color;
+            Save();
+            _nextScan = 0;
+        }
+
         private static void OnSetFavOrder(long sender, long playerId, ZPackage pkg)
         {
             if (!IsServer || playerId == 0) return;
@@ -349,9 +386,15 @@ namespace Portaler
                     BiomeCode = Biomes.CodeAt(zdo.GetPosition()),
                     BuiltAt = built,
                     Category = Cats.TryGetValue(key, out int cat) ? cat : 0,
+                    Color = Colors.TryGetValue(key, out int col) ? col : 0,
                 });
                 SeedCounter(name);
             }
+
+            // links point to this session's ids of their destinations
+            foreach (var p in list)
+                if (IdToKey.TryGetValue(p.Id, out var k) && Links.TryGetValue(k, out var toKey) && KeyToId.TryGetValue(toKey, out var toId))
+                    p.LinkTarget = toId;
 
             // Forget build times of portals that no longer exist (destroyed).
             if (list.Count > 0)
@@ -365,6 +408,9 @@ namespace Portaler
                     if (set.RemoveWhere(k => !alive.Contains(k)) > 0) changed = true;
                 if (Shared.RemoveWhere(k => !alive.Contains(k)) > 0) { changed = true; BroadcastShared(); }
                 foreach (var k in Cats.Keys.Where(k => !alive.Contains(k)).ToList()) { Cats.Remove(k); changed = true; }
+                foreach (var k in Colors.Keys.Where(k => !alive.Contains(k)).ToList()) { Colors.Remove(k); changed = true; }
+                // a link whose start or destination is gone is dropped (the start is an open portal again)
+                foreach (var k in Links.Where(kv => !alive.Contains(kv.Key) || !alive.Contains(kv.Value)).Select(kv => kv.Key).ToList()) { Links.Remove(k); changed = true; }
                 foreach (var o in Order.Values)
                     if (o.RemoveAll(k => !alive.Contains(k)) > 0) changed = true;
                 var lostTrips = Trips.Where(kv => !alive.Contains(kv.Value.Key)).Select(kv => kv.Key).ToList();
@@ -416,7 +462,8 @@ namespace Portaler
             {
                 sb.Append(p.Id.UserID).Append(':').Append(p.Id.ID).Append('|').Append(p.Name).Append('|')
                   .Append(Mathf.RoundToInt(p.Position.x)).Append(',').Append(Mathf.RoundToInt(p.Position.z))
-                  .Append('|').Append(p.BuiltAt).Append('|').Append(p.Category).Append(';');
+                  .Append('|').Append(p.BuiltAt).Append('|').Append(p.Category).Append('|').Append(p.Color)
+                  .Append('|').Append(p.LinkTarget.UserID).Append(':').Append(p.LinkTarget.ID).Append(';');
             }
             return sb.ToString();
         }
@@ -439,6 +486,8 @@ namespace Portaler
             Cats.Clear();
             Order.Clear();
             Trips.Clear();
+            Links.Clear();
+            Colors.Clear();
             string world = ZNet.instance.GetWorldName() ?? "world";
             foreach (char c in Path.GetInvalidFileNameChars()) world = world.Replace(c, '_');
             _dataFile = DataFilePath(world);
@@ -459,6 +508,8 @@ namespace Portaler
                     Trips[tpid] = new Trip { Key = parts[2], Time = tt, Name = string.Join(" ", parts.Skip(4).ToArray()) };
                     continue;
                 }
+                if (parts.Length == 3 && parts[0] == "link") { Links[parts[1]] = parts[2]; continue; }
+                if (parts.Length == 3 && parts[0] == "color" && int.TryParse(parts[2], out int colv)) { if (PortalColors.Has(colv)) Colors[parts[1]] = colv; continue; }
                 if (parts.Length == 2 && parts[0] == "shared") { Shared.Add(parts[1]); continue; }
                 if (parts.Length == 3 && parts[0] == "cat" && int.TryParse(parts[2], out int cv)) { Cats[parts[1]] = Categories.Clamp(cv); continue; }
                 if (parts.Length == 3 && parts[0] == "order" && long.TryParse(parts[1], out long opid))
@@ -516,6 +567,8 @@ namespace Portaler
                 foreach (var kv in Cats) lines.Add($"cat {kv.Key} {kv.Value}");
                 foreach (var kv in Order)
                     if (kv.Value.Count > 0) lines.Add($"order {kv.Key} {string.Join(",", kv.Value)}");
+                foreach (var kv in Links) lines.Add($"link {kv.Key} {kv.Value}");
+                foreach (var kv in Colors) lines.Add($"color {kv.Key} {kv.Value}");
                 foreach (var kv in Trips) lines.Add($"trip {kv.Key} {kv.Value.Key} {kv.Value.Time} {kv.Value.Name}");
                 string tmp = _dataFile + ".tmp";
                 File.WriteAllLines(tmp, lines.ToArray());

@@ -1,5 +1,13 @@
 # Changelog
 
+## 1.0.14
+- **One-way links**: link a portal to one destination and walking into it takes you straight there, without the list. Press **L** on a hovered name or pin while standing in a portal, or right click → "Link this portal here"; choose one way or both ways and a colour. "Link it to…" in the menu links any two portals. In the world, **L** on a portal links it or removes its link.
+- The destination's name floats above linked portals (within 20 m), and their hover text says "Leads to: …". Rows show "Name → Destination".
+- **Portal colours**: any portal can glow in one of 8 colours or keep the vanilla look (**C**, or right click → Colour). Shown on the portal, as a ring around its map pin and as a mark on its row.
+- **Right-click menu** on names and portal pins: travel, link, remove link, colour, favorite, category, rename. Favorites are now toggled with the star (or the menu).
+- New settings: `[Controls] LinkKey` (L), `ColorKey` (C), `[World] FloatingNames`, `FloatingNameDistance`.
+- The server DLL must be updated too (links and colours are stored and shared by the server).
+
 ## 1.0.13
 - **Quick arrival** (new, on by default, `[Travel] QuickArrival`): trips through Portaler skip the game's fixed waits (2 s before moving, at least 8 s in total). You are moved as soon as the screen is dark and arrive as soon as the target area is loaded. Measured: 4-6 s instead of 8.6-10.5 s. Vanilla portals and dungeons are not changed; off automatically when Fast Teleport is installed.
 - Smoother list: no freeze the first time the map opens (it was up to 2 s; fonts, styles and the big panel are now prepared right after you spawn, the wooden boards are drawn on a background thread).

@@ -329,6 +329,32 @@ namespace Portaler
             return tex;
         }
 
+        private static Sprite _ring;
+
+        /// <summary>White ring with a soft outer glow (tinted per portal colour) for map pins.</summary>
+        public static Sprite RingSprite()
+        {
+            if (_ring != null) return _ring;
+            const int size = 64;
+            var tex = new Texture2D(size, size, TextureFormat.RGBA32, false);
+            float c = (size - 1) / 2f;
+            for (int y = 0; y < size; y++)
+                for (int x = 0; x < size; x++)
+                {
+                    float d = Mathf.Sqrt((x - c) * (x - c) + (y - c) * (y - c)) / (size / 2f); // 0 centre, 1 edge
+                    float ring = Mathf.Clamp01(1f - Mathf.Abs(d - 0.86f) / 0.06f);        // solid band
+                    float glow = Mathf.Clamp01(1f - Mathf.Abs(d - 0.86f) / 0.16f) * 0.45f;  // soft halo
+                    float a = Mathf.Max(ring, glow);
+                    tex.SetPixel(x, y, Px(new Color(1f, 1f, 1f, a)));
+                }
+            tex.Apply();
+            tex.filterMode = FilterMode.Bilinear;
+            tex.wrapMode = TextureWrapMode.Clamp;
+            tex.hideFlags = HideFlags.HideAndDontSave;
+            _ring = Sprite.Create(tex, new Rect(0, 0, size, size), new Vector2(0.5f, 0.5f));
+            return _ring;
+        }
+
         /// <summary>Check mark for the player selector.</summary>
         public static Texture2D Check(Color col, int size = 32)
         {

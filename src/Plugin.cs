@@ -15,7 +15,7 @@ namespace Portaler
     {
         public const string Guid = "nfp007.Portaler";
         public const string Name = "Portaler";
-        public const string Version = "1.0.13";
+        public const string Version = "1.0.14";
 
         internal static Plugin Instance;
         internal static ManualLogSource Log;
@@ -24,7 +24,9 @@ namespace Portaler
         internal static BepInEx.Configuration.ConfigEntry<bool> VanillaRestrictions;
 
         // personal settings (each PC)
-        internal static BepInEx.Configuration.ConfigEntry<KeyCode> RenameKey, CategoryKey;
+        internal static BepInEx.Configuration.ConfigEntry<KeyCode> RenameKey, CategoryKey, LinkKey, ColorKey;
+        internal static BepInEx.Configuration.ConfigEntry<bool> FloatingNames;
+        internal static BepInEx.Configuration.ConfigEntry<float> FloatingNameDistance;
         internal static BepInEx.Configuration.ConfigEntry<bool> HoverShowsMap, HoverReturn, HoverLine;
         internal static BepInEx.Configuration.ConfigEntry<bool> PerfLog, QuickArrival;
         internal static BepInEx.Configuration.ConfigEntry<float> HoverDelay, HoverZoomMeters, HoverReturnDelay, PinSizePreview, PinSizeHover, HoverMaxFitMeters, HoverMoveSeconds;
@@ -43,6 +45,11 @@ namespace Portaler
 
             RenameKey = Config.Bind("Controls", "RenameKey", KeyCode.E, "Hover a name in the list and press this key to rename the portal.");
             CategoryKey = Config.Bind("Controls", "CategoryKey", KeyCode.T, "Hover a name in the list and press this key to choose the portal's category.");
+
+            LinkKey = Config.Bind("Controls", "LinkKey", KeyCode.L, "Hover a name or pin and press this key to link the portal you stand in to it. Looking at a portal in the world: link it, or remove its link.");
+            ColorKey = Config.Bind("Controls", "ColorKey", KeyCode.C, "Hover a name or pin (or look at a portal) and press this key to choose the portal's colour.");
+            FloatingNames = Config.Bind("World", "FloatingNames", true, "Show the destination's name above linked portals near you.");
+            FloatingNameDistance = Config.Bind("World", "FloatingNameDistance", 20f, "How close (metres) you must be to a linked portal to see its destination's name.");
 
             HoverShowsMap = Config.Bind("Map", "HoverShowsMap", true, "Hovering a name in the list moves the map to that portal.");
             HoverDelay = Config.Bind("Map", "HoverDelay", 0.4f, "Seconds the mouse must rest on a name before the map moves.");
@@ -93,6 +100,7 @@ namespace Portaler
                 t = Perf.Begin();
                 PortalClient.ScalePins();
                 Perf.End(Perf.S.Scale, t);
+                PortalVisuals.Tick();
                 Perf.TeleportTick();
                 Perf.Tick();
             }
@@ -106,6 +114,7 @@ namespace Portaler
         {
             try
             {
+                PortalVisuals.DrawFloatingNames();
                 var t = Perf.Begin();
                 PortalUI.Draw();
                 Perf.End(Perf.S.Gui, t);

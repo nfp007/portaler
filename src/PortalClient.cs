@@ -47,6 +47,8 @@ namespace Portaler
         private static float _activatedAt;
 
         private const float LeaveDistance = 4f;
+        private const float LeaveDistanceWorld = 9f; // list opened with L / C while looking at a portal
+        private static float _leaveDistance = LeaveDistance;
 
         private static readonly Dictionary<ZDOID, Minimap.PinData> Pins = new Dictionary<ZDOID, Minimap.PinData>();
         private static bool _pinsDirty;
@@ -87,8 +89,38 @@ namespace Portaler
         private static void OnList(long sender, ZPackage pkg)
         {
             Portals = PortalInfo.ReadList(pkg);
+            ById.Clear();
+            foreach (var p in Portals) ById[p.Id] = p;
             _pinsDirty = true;
             DataVersion++;
+        }
+
+        private static readonly Dictionary<ZDOID, PortalInfo> ById = new Dictionary<ZDOID, PortalInfo>();
+
+        /// <summary>The portal with this id from the server's list, or null.</summary>
+        public static PortalInfo Get(ZDOID id) => id != ZDOID.None && ById.TryGetValue(id, out var p) ? p : null;
+
+        /// <summary>Where a linked portal leads (null when it is open or its destination is gone).</summary>
+        public static PortalInfo LinkOf(PortalInfo p) => p != null && p.IsLinked ? Get(p.LinkTarget) : null;
+
+        /// <summary>Link a portal to one destination (to = null removes the link). Shared with everybody.</summary>
+        public static void SetLink(PortalInfo from, PortalInfo to)
+        {
+            if (from == null || ZRoutedRpc.instance == null) return;
+            if (to != null && to.Id == from.Id) return;
+            from.LinkTarget = to != null ? to.Id : ZDOID.None; // show it right away
+            DataVersion++;
+            ZRoutedRpc.instance.InvokeRoutedRPC(PortalServer.RpcSetLink, from.Id, to != null ? to.Id : ZDOID.None);
+        }
+
+        /// <summary>Set a portal's colour (0 = vanilla look). Shared with everybody.</summary>
+        public static void SetColor(PortalInfo p, int color)
+        {
+            if (p == null || ZRoutedRpc.instance == null) return;
+            p.Color = PortalColors.Clamp(color);
+            DataVersion++;
+            _pinsDirty = true;
+            ZRoutedRpc.instance.InvokeRoutedRPC(PortalServer.RpcSetColor, p.Id, p.Color);
         }
 
         /// <summary>This player's order of favorites (first = top). Favorites missing here go to the end.</summary>
@@ -319,11 +351,44 @@ namespace Portaler
 
         // ---------- choose-destination mode ----------
 
-        public static void Activate(TeleportWorld portal)
+        /// <summary>
+        /// The player walked into a portal. A linked portal sends him straight to its destination,
+        /// any other portal opens the map and the list.
+        /// </summary>
+        public static void OnPortalEntered(TeleportWorld portal)
+        {
+            var nview = portal.GetComponent<ZNetView>();
+            if (nview == null || !nview.IsValid()) return;
+            var here = Get(nview.GetZDO().m_uid);
+            var dest = LinkOf(here);
+            var player = Player.m_localPlayer;
+            if (dest != null && player != null && !player.IsTeleporting())
+            {
+                SetSource(portal, nview);
+                player.Message(MessageHud.MessageType.Center, "Travelling to " + dest.DisplayName, 0, null);
+                TeleportTo(dest);
+                SourceId = ZDOID.None;
+                _sourceTransform = null;
+                return;
+            }
+            Activate(portal);
+        }
+
+        private static void SetSource(TeleportWorld portal, ZNetView nview)
+        {
+            SourceId = nview.GetZDO().m_uid;
+            _sourceTransform = portal.transform;
+            _sourcePos = portal.transform.position;
+            _exitDistance = portal.m_exitDistance > 0 ? portal.m_exitDistance : 1f;
+            _sourceAllowAllItems = portal.m_allowAllItems;
+        }
+
+        public static void Activate(TeleportWorld portal, bool fromWorldKey = false)
         {
             var nview = portal.GetComponent<ZNetView>();
             if (nview == null || !nview.IsValid()) return;
             if (Minimap.instance == null) return;
+            _leaveDistance = fromWorldKey ? LeaveDistanceWorld : LeaveDistance;
 
             SourceId = nview.GetZDO().m_uid;
             _sourceTransform = portal.transform;
@@ -363,7 +428,7 @@ namespace Portaler
                 ReskinForeignPins();
                 Perf.End(Perf.S.PinScan, st);
             }
-            if (!Active) { _hoverPortal = null; _hoverSince = 0f; StopGlow(); _saved = false; FlowLine.Hide(); return; }
+            if (!Active) { _hoverPortal = null; _hoverSince = 0f; StopGlow(); _saved = false; FlowLine.Hide(); WorldKeys(); return; }
 
             var player = Player.m_localPlayer;
             if (player == null || Minimap.instance == null) { Deactivate(false); return; }
@@ -378,10 +443,87 @@ namespace Portaler
 
             // The portal was destroyed, or the player walked away from it.
             if (_sourceTransform == null ||
-                Vector3.Distance(player.transform.position, _sourceTransform.position) > LeaveDistance)
+                Vector3.Distance(player.transform.position, _sourceTransform.position) > _leaveDistance)
             {
                 Deactivate(true);
             }
+        }
+
+        // ---------- keys while looking at a portal in the world ----------
+
+        private static ZDOID _confirmUnlink = ZDOID.None;
+        private static float _confirmUntil;
+
+        /// <summary>The portal the player is looking at (hover), or null.</summary>
+        public static TeleportWorld LookedAtPortal()
+        {
+            var player = Player.m_localPlayer;
+            var go = player != null ? player.GetHoverObject() : null;
+            return go != null ? go.GetComponentInParent<TeleportWorld>() : null;
+        }
+
+        private static bool GameTakesKeys()
+        {
+            if (Console.IsVisible() || TextInput.IsVisible() || Menu.IsVisible() || InventoryGui.IsVisible() || Minimap.IsOpen()) return false;
+            if (Chat.instance != null && Chat.instance.HasFocus()) return false;
+            var player = Player.m_localPlayer;
+            return player != null && !player.InPlaceMode() && !player.IsTeleporting();
+        }
+
+        /// <summary>L = link / remove the link, C = colour, for the portal the player looks at.</summary>
+        private static void WorldKeys()
+        {
+            bool link = Input.GetKeyDown(Plugin.LinkKey.Value), color = Input.GetKeyDown(Plugin.ColorKey.Value);
+            if (!link && !color) return;
+            if (!GameTakesKeys()) return;
+            var tw = LookedAtPortal();
+            var nview = tw != null ? tw.GetComponent<ZNetView>() : null;
+            if (nview == null || !nview.IsValid()) return;
+            var p = Get(nview.GetZDO().m_uid);
+            if (p == null) return;
+            var player = Player.m_localPlayer;
+
+            if (color)
+            {
+                Activate(tw, true);
+                PortalUI.OpenColorWindow(p);
+                return;
+            }
+            var dest = LinkOf(p);
+            if (dest == null)
+            {
+                Activate(tw, true);
+                PortalUI.BeginPick(p);
+                return;
+            }
+            // linked: second press within 3 s removes the link
+            if (_confirmUnlink == p.Id && Time.time < _confirmUntil)
+            {
+                SetLink(p, null);
+                _confirmUnlink = ZDOID.None;
+                player.Message(MessageHud.MessageType.Center, $"{p.DisplayName} is an open portal again", 0, null);
+            }
+            else
+            {
+                _confirmUnlink = p.Id;
+                _confirmUntil = Time.time + 3f;
+                player.Message(MessageHud.MessageType.Center, $"Press {Plugin.LinkKey.Value} again to remove the link to {dest.DisplayName}", 0, null);
+            }
+        }
+
+        /// <summary>Text added to a portal's hover text: where it leads, and the L / C keys.</summary>
+        public static string HoverExtra(TeleportWorld tw)
+        {
+            var nview = tw != null ? tw.GetComponent<ZNetView>() : null;
+            if (nview == null || !nview.IsValid()) return "";
+            var p = Get(nview.GetZDO().m_uid);
+            if (p == null) return "";
+            var dest = LinkOf(p);
+            var sb = new System.Text.StringBuilder();
+            if (dest != null) sb.Append("\n<color=#ffbe3c>Leads to: ").Append(dest.DisplayName).Append("</color>");
+            sb.Append("\n[<color=yellow><b>").Append(Plugin.LinkKey.Value).Append("</b></color>] ").Append(dest != null ? "Remove link" : "Link");
+            sb.Append("   [<color=yellow><b>").Append(Plugin.ColorKey.Value).Append("</b></color>] Colour");
+            return sb.ToString();
         }
 
         // ---------- hover a name -> show it on the map ----------
@@ -430,6 +572,9 @@ namespace Portaler
             return root != null ? root.sortingOrder : 0;
         }
 
+        /// <summary>The portal whose pin is under the mouse on the large map (null when none).</summary>
+        public static PortalInfo HoveredPin { get; private set; }
+
         public static void ScalePins()
         {
             var map = Minimap.instance;
@@ -442,10 +587,14 @@ namespace Portaler
             if (_mapCanvas == null && map.m_pinRootLarge != null) _mapCanvas = map.m_pinRootLarge.GetComponentInParent<Canvas>();
             Camera cam = _mapCanvas != null && _mapCanvas.renderMode != RenderMode.ScreenSpaceOverlay ? _mapCanvas.worldCamera : null;
             float k = 1f - Mathf.Exp(-Time.unscaledDeltaTime * 14f);
+            ZDOID hoveredPin = ZDOID.None;
             foreach (var kv in Pins)
             {
                 var pin = kv.Value;
                 if (pin == null || pin.m_uiElement == null) continue;
+                if (large && hoveredPin == ZDOID.None && RectTransformUtility.RectangleContainsScreenPoint(pin.m_uiElement, mouse, cam)) hoveredPin = kv.Key;
+                ById.TryGetValue(kv.Key, out var info);
+                PortalVisuals.PinRing(pin, info != null ? info.Color : 0);
                 float target = 1f;
                 if (large && Active)
                 {
@@ -469,6 +618,7 @@ namespace Portaler
                 if (name != null) SetOnTop(name, lift ? (big ? 13 : 11) : 0);
                 if (lift && pin.m_iconElement != null && pin.m_iconElement.color != Color.white) pin.m_iconElement.color = Color.white;
             }
+            HoveredPin = Get(hoveredPin);
         }
         private static bool _saved, _returning;
         private static Vector3 _savedOffset, _targetOffset;
@@ -710,6 +860,19 @@ namespace Portaler
         }
 
         /// <summary>Map click while choosing: teleport to the portal pin under the cursor.</summary>
+        /// <summary>The portal whose pin is at this map point (within radius), or null.</summary>
+        public static PortalInfo PortalAtMapPoint(Vector3 worldPoint, float radius)
+        {
+            PortalInfo best = null;
+            float bestDist = radius;
+            foreach (var p in Portals)
+            {
+                float d = Utils.DistanceXZ(p.Position, worldPoint);
+                if (d <= bestDist) { bestDist = d; best = p; }
+            }
+            return best;
+        }
+
         public static bool TryTeleportAtMapPoint(Vector3 worldPoint, float radius)
         {
             PortalInfo best = null;
@@ -720,7 +883,8 @@ namespace Portaler
                 if (d <= bestDist) { bestDist = d; best = p; }
             }
             if (best == null) return false;
-            TeleportTo(best);
+            if (PortalUI.Picking) PortalUI.PickTarget(best);
+            else TeleportTo(best);
             return true;
         }
 

@@ -15,6 +15,12 @@ namespace Portaler
         public long BuiltAt;
         /// <summary>Category number (see <see cref="Categories"/>), 0 = none.</summary>
         public int Category;
+        /// <summary>Colour number (see <see cref="PortalColors"/>), 0 = vanilla look.</summary>
+        public int Color;
+        /// <summary>One-way link: walking into this portal goes straight to this one. ZDOID.None = open portal (shows the list).</summary>
+        public ZDOID LinkTarget = ZDOID.None;
+
+        public bool IsLinked => LinkTarget != ZDOID.None;
 
         public string DisplayName => string.IsNullOrEmpty(Name) ? "(unnamed)" : Name;
 
@@ -30,6 +36,8 @@ namespace Portaler
                 pkg.Write(p.BiomeCode ?? "");
                 pkg.Write(p.BuiltAt);
                 pkg.Write(p.Category);
+                pkg.Write(p.Color);
+                pkg.Write(p.LinkTarget);
             }
         }
 
@@ -48,6 +56,8 @@ namespace Portaler
                     BiomeCode = pkg.ReadString(),
                     BuiltAt = pkg.ReadLong(),
                     Category = Categories.Clamp(pkg.ReadInt()),
+                    Color = PortalColors.Clamp(pkg.ReadInt()),
+                    LinkTarget = pkg.ReadZDOID(),
                 });
             }
             return list;

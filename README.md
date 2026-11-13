@@ -12,6 +12,7 @@ Built for servers that play together:
 - **Last built**: the newest portals on the server.
 - **Search, sorting** (biome, name, distance), foldable groups and blocks you can drag into your own order.
 - **Quick arrival**: you arrive as soon as the target area is loaded, often in half the game's usual time.
+- **One-way links and colours**: link a portal straight to one destination, and give any portal its own colour.
 - **Automatic names** by biome (`BF-007`, `MO-012`) and renaming any portal right from the list.
 
 Everybody has the same rights: anyone can rename, set categories or change shared favorites. Everything shared is synced through the server and kept with the world save, so it survives restarts and mod updates.
@@ -45,7 +46,7 @@ Every feature says what is **🌐 shared** (the same for everybody on the server
 ![The fiery line from your portal to the previewed one](https://raw.githubusercontent.com/nfp007/portaler/main/docs/f-preview.jpg)
 
 **3. Favorites**
-- Right click a name: **mine** (silver star), then **shared** (bigger glowing gold star), then off.
+- Click the star of a name (or right click → Favorite): **mine** (silver star), then **shared** (bigger glowing gold star), then off.
 - Drag favorites by their handle into any order. New favorites go to the end.
 - 🌐 Shared: gold stars. Everybody sees them, and anyone can add or remove them.
 - 👤 Personal: silver stars and the order of your favorites (per character, saved on the server).
@@ -118,14 +119,25 @@ Every feature says what is **🌐 shared** (the same for everybody on the server
 
 ![A portal pin with its category badge](https://raw.githubusercontent.com/nfp007/portaler/main/docs/f-pins.jpg)
 
-**12. Quick arrival**
+**12. One-way links and portal colours**
+- **Link a portal to one destination**: walk into a linked portal and you travel straight there, without the list, just like the game's own portal pairs. Handy for a direct road between two bases.
+- Standing in a portal, hover another portal in the list or on the map and press **L**, or right click it → "Link this portal here". A small window asks **one way** or **both ways**, and the portal's colour.
+- Right click any portal → "Link it to…" links any two portals, wherever you stand.
+- Looking at a portal in the world: **L** links it (the map opens to pick the destination), or removes its link (press L twice).
+- Linked portals show the destination's name floating above them (within 20 m), and "Leads to: …" in their hover text. In the list: "Mine → BASE Plains".
+- From any other portal you can still travel *to* a linked portal as usual. If a destination is destroyed, the link is dropped.
+- **Colours**: any portal can glow in one of 8 colours (Ice, Green, Gold, Red, Purple, Teal, White, Pink) or keep the vanilla look. Press **C** (on a name, a pin, or a portal in the world) or right click → Colour. The colour shows on the portal itself, as a ring around its map pin and as a mark on its row.
+- Portals with the same name never link each other.
+- 🌐 Shared: links and colours (anyone can change them).
+
+**13. Quick arrival**
 - The game's own teleport always waits 2 seconds before it moves you and at least 8 seconds in total, even when the target area is already loaded.
 - Trips through Portaler skip those fixed waits: you are moved as soon as the screen is dark, and you arrive as soon as the target area is loaded and there is ground under you.
 - Measured: trips that took 8.6-10.5 s now take 4-6 s. Areas that load slowly still take as long as they need: you never arrive before the area is ready, and the game's own safety (15 s) still applies.
 - Only Portaler trips are affected; vanilla portals and dungeon entrances stay as they are. If [Fast Teleport](https://www.nexusmods.com/valheim/mods/1774) is installed, Portaler leaves the timing to it.
 - 👤 Personal: on by default, `[Travel] QuickArrival` in your config.
 
-**13. Optional vanilla restrictions**
+**14. Optional vanilla restrictions**
 - By default every item can travel, metals included.
 - Prefer the game's own rules? Switch on `VanillaRestrictions` on the server (see Configuration).
 - 🌐 Shared: the server decides for everybody.
@@ -139,7 +151,10 @@ All shared data is stored on the server, next to the world save, and survives re
 |---|---|
 | Open the portal list | Walk into any portal |
 | Travel | Left click a name in the list, or a portal pin on the map |
-| Favorite: mine / shared / off | Right click a name (or click its star) |
+| Favorite: mine / shared / off | Click the star of a name (or right click → Favorite) |
+| Portal menu | Right click a name or a portal pin: travel, link, remove link, colour, favorite, category, rename |
+| Link a portal | Standing in a portal: hover a name or pin and press **L**. Looking at a portal in the world: **L** (press twice to remove a link) |
+| Portal colour | Hover a name or pin, or look at a portal, and press **C** |
 | See a portal on the map | Hover its name for a moment |
 | Rename a portal | Hover its name and press **E**, then Enter to save or Esc to cancel |
 | Set a category | Hover its name and press **T**, click a category (Esc closes) |
@@ -166,6 +181,10 @@ Config file: `BepInEx/config/nfp007.Portaler.cfg` (created on first start). `[Se
 |---|---|---|
 | `[Controls] RenameKey` | `E` | Key to rename the hovered portal. Any Unity key name, e.g. `R`, `F2`. |
 | `[Controls] CategoryKey` | `T` | Key to choose the hovered portal's category. |
+| `[Controls] LinkKey` | `L` | Link the portal you stand in to the hovered name or pin; in the world: link or unlink the portal you look at. |
+| `[Controls] ColorKey` | `C` | Choose the colour of the hovered name, pin, or the portal you look at. |
+| `[World] FloatingNames` | `true` | Show the destination's name above linked portals near you. |
+| `[World] FloatingNameDistance` | `20` | How close (metres) you must be to see it. |
 | `[Map] HoverShowsMap` | `true` | Hovering a name moves the map to that portal. |
 | `[Map] HoverDelay` | `0.4` | Seconds the mouse must rest on a name before the map moves. |
 | `[Map] HoverMaxFitMeters` | `2000` | Portals closer than this (metres) are framed together; farther targets are shown directly. |
@@ -185,7 +204,7 @@ Everything else is set from inside the game:
 | What | Where it is stored |
 |---|---|
 | Sort choice and list sizes (per PC); folded groups, group order, "Back to" history and followed players (per character) | `Portaler.prefs` in Valheim's data folder (`AppData\LocalLow\IronGate\Valheim`) |
-| Favorites and their order, categories, "Last built", players' last trips, name counters (per world) | `<world>.portaler.txt` next to the world save on the server |
+| Favorites and their order, categories, links, colours, "Last built", players' last trips, name counters (per world) | `<world>.portaler.txt` next to the world save on the server |
 
 - Keep `<world>.portaler.txt` together with your world backups.
 - Deleting it resets favorites and "Last built". Numbering then continues from the highest existing portal number.

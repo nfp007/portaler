@@ -36,7 +36,48 @@ namespace Portaler
                 var player = colliderIn.GetComponent<Player>();
                 if (player == null || player != Player.m_localPlayer) return false;
                 var portal = __instance.GetComponentInParent<TeleportWorld>();
-                if (portal != null) PortalClient.Activate(portal);
+                if (portal != null) PortalClient.OnPortalEntered(portal);
+                return false;
+            }
+        }
+
+        /// <summary>Remember loaded portals (they get their colour from the server's list).</summary>
+        [HarmonyPatch(typeof(TeleportWorld), "Awake")]
+        private static class TeleportWorld_Awake
+        {
+            private static void Postfix(TeleportWorld __instance) => PortalVisuals.Register(__instance);
+        }
+
+        /// <summary>Hover text of a portal: where a linked portal leads, and the link / colour keys.</summary>
+        [HarmonyPatch(typeof(TeleportWorld), nameof(TeleportWorld.GetHoverText))]
+        private static class TeleportWorld_GetHoverText
+        {
+            private static void Postfix(TeleportWorld __instance, ref string __result)
+            {
+                try { __result += PortalClient.HoverExtra(__instance); } catch { }
+            }
+        }
+
+        /// <summary>
+        /// While choosing a destination, a right click on a portal pin opens Portaler's menu instead of removing pins;
+        /// a right click on the list never reaches the map.
+        /// </summary>
+        [HarmonyPatch(typeof(Minimap), "RemovePinUnderPointer")]
+        private static class Minimap_RemovePinUnderPointer
+        {
+            private static readonly System.Func<Minimap, Vector3, Vector3> ScreenToWorld =
+                AccessTools.MethodDelegate<System.Func<Minimap, Vector3, Vector3>>(AccessTools.Method(typeof(Minimap), "ScreenToWorldPoint"));
+            private static readonly System.Func<Minimap, float> PinRadius =
+                AccessTools.MethodDelegate<System.Func<Minimap, float>>(AccessTools.PropertyGetter(typeof(Minimap), "PinInteractRadius"));
+
+            private static bool Prefix(Minimap __instance)
+            {
+                if (!PortalClient.Active) return true;
+                if (PortalUI.ListHasMouse || PortalUI.WindowOpen) return false;
+                var p = PortalClient.PortalAtMapPoint(ScreenToWorld(__instance, ZInput.pointerPosition), PinRadius(__instance) * 1.5f);
+                if (p == null) return true; // empty map: vanilla behaviour
+                Vector2 m = ZInput.pointerPosition;
+                PortalUI.OpenMenu(p, new Vector2(m.x, Screen.height - m.y));
                 return false;
             }
         }
