@@ -1,39 +1,23 @@
 # Changelog
 
-## 1.0.21 (developer build, not published)
-- Clearer linking: the right-click menu has one "Link..." item. The menu title shows the portal and where it leads, and a line says where you are.
-- New link dialog in the middle of the screen: "From" and "To" with Change... (pick another portal in the list or on the map), Swap, direction (default both ways) and colour (default vanilla, or the colour the portal already has).
-- Colour, category and players windows also open in the middle of the screen; the map behind them is darkened and ignores clicks.
+## 2.0.0
+**One-way links**
+- Link a portal to one destination: walk into it and you travel straight there, without the list, like the game's own portal pairs. Perfect for a direct road between two bases.
+- Right click a name or a portal pin → **Link…** (or press **L**). A window in the middle of the screen shows **From** and **To**: walking into "From" takes you to "To". **Change…** picks another portal for either end, **Swap** turns the direction, and you choose **both ways** (default) or **one way**.
+- Looking at a portal in the world: **L** links it, or removes its link (press twice).
+- Linked portals show their destination's name floating above them, "Leads to: …" in their hover text, and "Name → Destination" in the list. From any other portal you can still travel to a linked portal. If a destination is destroyed, the link is dropped.
 
-## 1.0.20 (developer build, not published)
-- The dark swirl in the middle of the portal takes a darker shade of the portal's colour (blended halfway); the light glow, sparks and light stay vanilla.
+**Portal colours**
+- Give any portal one of 8 colours (Ice, Green, Gold, Red, Purple, Teal, White, Pink) or keep the vanilla look: press **C** on a name, a pin or a portal in the world, or right click → Colour.
+- The runes and the fire around the portal burn in its colour, the swirl in the middle takes a darker shade. The map pin gets a ring and the list row a mark in the same colour.
 
-## 1.0.19 (developer build, not published)
-- The middle of the portal is vanilla again (for comparing); runes and fire keep the portal's colour.
+**Right-click menu**
+- On every name and portal pin: travel, link, remove link, colour, favorite, category, rename. The title shows where the portal leads and where you are. Favorites are toggled with the star (or the menu).
+- Link, colour, category and players windows open in the middle of the screen.
 
-## 1.0.18 (developer build, not published)
-- Gold is a little darker.
-- The glow in the middle of the ring and its light take a hint (40 %) of the portal's colour; the dark swirl and the sparks stay vanilla.
-
-## 1.0.17 (developer build, not published)
-- Portal colours: the runes take the colour again (as in 1.0.14).
-- The fire's colours come from its particle colours (the shader has no gradient texture, so 1.0.16 changed nothing). They now get the portal's colour while keeping their brightness. The swirl inside, its sparks and light stay vanilla.
-
-## 1.0.16 (developer build, not published)
-- Portal colours: the fire around the portal is drawn from a colour gradient in its material, not from the particle colour (that is why 1.0.15 showed no change). A coloured portal now gets its own copy of the fire material with a gradient in its colour. Runes, swirl, sparks and light stay vanilla.
-- Developer log lists the fire's shader properties once.
-
-## 1.0.15 (developer build, not published)
-- Portal colours: only the fire around the portal takes the colour; the runes and the swirl inside stay vanilla.
-- Developer log lists each portal type's effects once (which ones get the colour).
-
-## 1.0.14 (developer build, not published)
-- **One-way links**: link a portal to one destination and walking into it takes you straight there, without the list. Press **L** on a hovered name or pin while standing in a portal, or right click → "Link this portal here"; choose one way or both ways and a colour. "Link it to…" in the menu links any two portals. In the world, **L** on a portal links it or removes its link.
-- The destination's name floats above linked portals (within 20 m), and their hover text says "Leads to: …". Rows show "Name → Destination".
-- **Portal colours**: any portal can glow in one of 8 colours or keep the vanilla look (**C**, or right click → Colour). Shown on the portal, as a ring around its map pin and as a mark on its row.
-- **Right-click menu** on names and portal pins: travel, link, remove link, colour, favorite, category, rename. Favorites are now toggled with the star (or the menu).
+**Other**
 - New settings: `[Controls] LinkKey` (L), `ColorKey` (C), `[World] FloatingNames`, `FloatingNameDistance`.
-- The server DLL must be updated too (links and colours are stored and shared by the server).
+- **The server must be updated too**: links and colours are stored and shared by the server.
 
 ## 1.0.13
 - **Quick arrival** (new, on by default, `[Travel] QuickArrival`): trips through Portaler skip the game's fixed waits (2 s before moving, at least 8 s in total). You are moved as soon as the screen is dark and arrive as soon as the target area is loaded. Measured: 4-6 s instead of 8.6-10.5 s. Vanilla portals and dungeons are not changed; off automatically when Fast Teleport is installed.
