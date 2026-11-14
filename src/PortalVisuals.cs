@@ -122,7 +122,7 @@ namespace Portaler
 
         /// <summary>Same brightness and alpha, the portal colour's hue; saturation scaled so white-hot parts stay white.</summary>
         /// <summary>How much of the portal's colour the glow in the middle of the ring takes (the fire takes all of it).</summary>
-        private const float CenterTint = 0.4f;
+        private const float CenterTint = 0f; // vanilla centre for now (1.0.18 tried 0.4)
 
         private static Color Recolor(Color orig, Color target, float amount) =>
             amount >= 1f ? Recolor(orig, target) : Color.Lerp(orig, Recolor(orig, target), amount);

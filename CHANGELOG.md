@@ -1,5 +1,8 @@
 # Changelog
 
+## 1.0.19 (developer build, not published)
+- The middle of the portal is vanilla again (for comparing); runes and fire keep the portal's colour.
+
 ## 1.0.18 (developer build, not published)
 - Gold is a little darker.
 - The glow in the middle of the ring and its light take a hint (40 %) of the portal's colour; the dark swirl and the sparks stay vanilla.
