@@ -7,7 +7,7 @@ namespace Portaler
 {
     /// <summary>
     /// What portal colours and links look like:
-    ///  - portals loaded near the player glow in their colour (runes, light, particles);
+    ///  - the fire around portals loaded near the player burns in their colour (runes and the swirl stay vanilla);
     ///  - a linked portal shows its destination's name floating above it;
     ///  - map pins of coloured portals get a ring in their colour.
     /// Colour 0 (vanilla) restores the game's own look.
@@ -20,11 +20,19 @@ namespace Portaler
         private static readonly Dictionary<TeleportWorld, Orig> Originals = new Dictionary<TeleportWorld, Orig>();
         private static float _nextApply;
 
+        /// <summary>Original look of one particle system (restored for the vanilla colour).</summary>
+        private sealed class PsOrig
+        {
+            public ParticleSystem Ps;
+            public ParticleSystem.MinMaxGradient Start;
+            public bool OverLifetime;
+            public ParticleSystem.MinMaxGradient Life;
+        }
+
         private sealed class Orig
         {
-            public Color Emission;
-            public Color[] Lights;
-            public ParticleSystem.MinMaxGradient[] Particles;
+            public List<PsOrig> Fire = new List<PsOrig>();
+            public List<KeyValuePair<Light, Color>> Lights = new List<KeyValuePair<Light, Color>>();
             public int Applied = -1;
         }
 
@@ -60,6 +68,10 @@ namespace Portaler
             }
         }
 
+        /// <summary>
+        /// Only the fire around the portal takes the colour. The runes and the swirl inside the ring
+        /// (the game's "target found" effect) always keep their vanilla look.
+        /// </summary>
         private static void Apply(TeleportWorld tw, int color)
         {
             if (!Originals.TryGetValue(tw, out var o))
@@ -70,56 +82,76 @@ namespace Portaler
                 Originals[tw] = o;
             }
             if (o.Applied == color) return;
-            var fade = tw.m_target_found;
-            var parts = fade != null ? FadeParticles(fade) : null;
-            var light = fade != null ? FadeLight(fade) : null;
-            if (fade != null && (parts == null || o.Particles == null || parts.Length != o.Particles.Length))
+            try
             {
-                // the effect was not set up yet when we looked: take its originals again
-                var fresh = Capture(tw);
-                if (fresh == null) return;
-                o.Lights = fresh.Lights; o.Particles = fresh.Particles;
+                if (color == 0)
+                {
+                    foreach (var f in o.Fire)
+                    {
+                        if (f.Ps == null) continue;
+                        var m = f.Ps.main; m.startColor = f.Start;
+                        var col = f.Ps.colorOverLifetime; col.color = f.Life;
+                    }
+                    foreach (var l in o.Lights) if (l.Key != null) l.Key.color = l.Value;
+                }
+                else
+                {
+                    Color c = PortalColors.Values[PortalColors.Clamp(color)];
+                    foreach (var f in o.Fire)
+                    {
+                        if (f.Ps == null) continue;
+                        var m = f.Ps.main; m.startColor = new ParticleSystem.MinMaxGradient(c);
+                        // the fire's own colour change over its life would turn any colour red again: keep only its fading
+                        if (f.OverLifetime) { var col = f.Ps.colorOverLifetime; col.color = WhiteKeepAlpha(f.Life); }
+                    }
+                    foreach (var l in o.Lights) if (l.Key != null) l.Key.color = c;
+                }
+                o.Applied = color;
             }
-
-            if (color == 0)
+            catch (System.Exception e)
             {
-                tw.m_colorTargetfound = o.Emission;
-                if (light != null && o.Lights != null && o.Lights.Length > 0) light.color = o.Lights[0];
-                if (parts != null && o.Particles != null)
-                    for (int i = 0; i < parts.Length && i < o.Particles.Length; i++)
-                        if (parts[i] != null) { var m = parts[i].main; m.startColor = o.Particles[i]; }
+                o.Applied = color; // do not retry every tick
+                Plugin.Log.LogWarning("Portal colour: " + e.Message);
             }
-            else
-            {
-                Color c = PortalColors.Values[PortalColors.Clamp(color)];
-                // keep the brightness of the original glow (emission colours are stronger than 1)
-                float strength = Mathf.Max(1f, Mathf.Max(o.Emission.r, Mathf.Max(o.Emission.g, o.Emission.b)));
-                tw.m_colorTargetfound = new Color(c.r * strength, c.g * strength, c.b * strength, o.Emission.a);
-                if (light != null) light.color = c;
-                if (parts != null)
-                    foreach (var ps in parts)
-                        if (ps != null) { var m = ps.main; m.startColor = new ParticleSystem.MinMaxGradient(c); }
-            }
-            o.Applied = color;
         }
+
+        /// <summary>Same fading (alpha) as the original gradient, but white, so the start colour shows.</summary>
+        private static ParticleSystem.MinMaxGradient WhiteKeepAlpha(ParticleSystem.MinMaxGradient g)
+        {
+            var src = g.mode == ParticleSystemGradientMode.TwoGradients || g.mode == ParticleSystemGradientMode.Gradient ? g.gradientMax ?? g.gradient : null;
+            var grad = new Gradient();
+            var alpha = src != null ? src.alphaKeys : new[] { new GradientAlphaKey(1f, 0f), new GradientAlphaKey(1f, 1f) };
+            grad.SetKeys(new[] { new GradientColorKey(Color.white, 0f), new GradientColorKey(Color.white, 1f) }, alpha);
+            return new ParticleSystem.MinMaxGradient(grad);
+        }
+
+        private static readonly HashSet<string> Dumped = new HashSet<string>();
 
         private static Orig Capture(TeleportWorld tw)
         {
             try
             {
-                var o = new Orig { Emission = tw.m_colorTargetfound };
+                var o = new Orig();
+                // the swirl inside the ring and its light stay vanilla
+                var inside = new HashSet<ParticleSystem>();
+                Light insideLight = null;
                 var fade = tw.m_target_found;
                 if (fade != null)
                 {
-                    var light = FadeLight(fade);
-                    o.Lights = light != null ? new[] { light.color } : new Color[0];
                     var parts = FadeParticles(fade);
-                    if (parts != null)
-                    {
-                        o.Particles = new ParticleSystem.MinMaxGradient[parts.Length];
-                        for (int i = 0; i < parts.Length; i++) if (parts[i] != null) o.Particles[i] = parts[i].main.startColor;
-                    }
+                    if (parts != null) foreach (var ps in parts) if (ps != null) inside.Add(ps);
+                    foreach (var ps in fade.GetComponentsInChildren<ParticleSystem>(true)) inside.Add(ps);
+                    insideLight = FadeLight(fade);
                 }
+                foreach (var ps in tw.GetComponentsInChildren<ParticleSystem>(true))
+                {
+                    if (inside.Contains(ps)) continue;
+                    var life = ps.colorOverLifetime;
+                    o.Fire.Add(new PsOrig { Ps = ps, Start = ps.main.startColor, OverLifetime = life.enabled, Life = life.color });
+                }
+                foreach (var l in tw.GetComponentsInChildren<Light>(true))
+                    if (l != insideLight && (fade == null || !l.transform.IsChildOf(fade.transform))) o.Lights.Add(new KeyValuePair<Light, Color>(l, l.color));
+                if (Perf.On) Dump(tw, inside, o);
                 return o;
             }
             catch (System.Exception e)
@@ -127,6 +159,31 @@ namespace Portaler
                 Plugin.Log.LogWarning("Portal colour: " + e.Message);
                 return null;
             }
+        }
+
+        /// <summary>Developer log: which effects of this portal type get the colour (once per portal type).</summary>
+        private static void Dump(TeleportWorld tw, HashSet<ParticleSystem> inside, Orig o)
+        {
+            string type = tw.name.Replace("(Clone)", "");
+            if (!Dumped.Add(type)) return;
+            var sb = new System.Text.StringBuilder($"[Perf] Portal effects of {type}:");
+            foreach (var ps in tw.GetComponentsInChildren<ParticleSystem>(true))
+            {
+                var r = ps.GetComponent<ParticleSystemRenderer>();
+                var mat = r != null ? r.sharedMaterial : null;
+                sb.Append($"\n  {(inside.Contains(ps) ? "inside" : "FIRE  ")} {Path(ps.transform, tw.transform)} start={ps.main.startColor.color} life={(ps.colorOverLifetime.enabled ? "on" : "off")}" +
+                          $" mat={(mat != null ? mat.name + "/" + mat.shader.name : "-")}");
+            }
+            foreach (var l in tw.GetComponentsInChildren<Light>(true))
+                sb.Append($"\n  light {Path(l.transform, tw.transform)} color={l.color} {(o.Lights.Exists(k => k.Key == l) ? "COLOURED" : "vanilla")}");
+            Plugin.Log.LogInfo(sb.ToString());
+        }
+
+        private static string Path(Transform t, Transform root)
+        {
+            string s = t.name;
+            while (t.parent != null && t.parent != root) { t = t.parent; s = t.name + "/" + s; }
+            return s;
         }
 
         // ---------- floating destination names ----------

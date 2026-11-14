@@ -126,7 +126,7 @@ Every feature says what is **🌐 shared** (the same for everybody on the server
 - Looking at a portal in the world: **L** links it (the map opens to pick the destination), or removes its link (press L twice).
 - Linked portals show the destination's name floating above them (within 20 m), and "Leads to: …" in their hover text. In the list: "Mine → BASE Plains".
 - From any other portal you can still travel *to* a linked portal as usual. If a destination is destroyed, the link is dropped.
-- **Colours**: any portal can glow in one of 8 colours (Ice, Green, Gold, Red, Purple, Teal, White, Pink) or keep the vanilla look. Press **C** (on a name, a pin, or a portal in the world) or right click → Colour. The colour shows on the portal itself, as a ring around its map pin and as a mark on its row.
+- **Colours**: any portal can glow in one of 8 colours (Ice, Green, Gold, Red, Purple, Teal, White, Pink) or keep the vanilla look. Press **C** (on a name, a pin, or a portal in the world) or right click → Colour. The colour shows in the fire around the portal (the runes and the swirl inside keep their vanilla look), as a ring around its map pin and as a mark on its row.
 - Portals with the same name never link each other.
 - 🌐 Shared: links and colours (anyone can change them).
 

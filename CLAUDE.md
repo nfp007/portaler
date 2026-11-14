@@ -17,6 +17,10 @@ The same DLL runs on the dedicated server and on every client.
 - Developer build for measuring: `dotnet build -c Release -p:Dev=true` (performance log always on, zip `Portaler-<ver>-dev.zip`,
   never uploaded). Normal builds: `[Debug] PerfLog = true`. Measurements, findings and open optimisation ideas: `docs/PERFORMANCE.md`.
 
+## Current phase (Nov 2026)
+- Working on one-way links and portal colours: every build is a **developer build** (`-p:Dev=true`, zip `Portaler-<ver>-dev.zip`,
+  CHANGELOG entries marked "developer build, not published"). The next published version will be **2.0.0** (major).
+
 ## Versioning and release (every change)
 1. Bump the version in **three** places: `src/Plugin.cs` (`Version`), `Portaler.csproj` (`<Version>`), `package/Portaler/manifest.json` (`version_number`).
 2. Add a `CHANGELOG.md` entry at the top (copy to `package/Portaler/CHANGELOG.md`). Keep `README.md` and `package/Portaler/README.md` identical.

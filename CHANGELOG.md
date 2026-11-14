@@ -1,6 +1,10 @@
 # Changelog
 
-## 1.0.14
+## 1.0.15 (developer build, not published)
+- Portal colours: only the fire around the portal takes the colour; the runes and the swirl inside stay vanilla.
+- Developer log lists each portal type's effects once (which ones get the colour).
+
+## 1.0.14 (developer build, not published)
 - **One-way links**: link a portal to one destination and walking into it takes you straight there, without the list. Press **L** on a hovered name or pin while standing in a portal, or right click → "Link this portal here"; choose one way or both ways and a colour. "Link it to…" in the menu links any two portals. In the world, **L** on a portal links it or removes its link.
 - The destination's name floats above linked portals (within 20 m), and their hover text says "Leads to: …". Rows show "Name → Destination".
 - **Portal colours**: any portal can glow in one of 8 colours or keep the vanilla look (**C**, or right click → Colour). Shown on the portal, as a ring around its map pin and as a mark on its row.
