@@ -7,7 +7,7 @@ namespace Portaler
 {
     /// <summary>
     /// What portal colours and links look like:
-    ///  - the fire around portals loaded near the player burns in their colour (runes and the swirl stay vanilla);
+    ///  - the fire around portals loaded near the player burns in their colour (runes, swirl, sparks and light stay vanilla);
     ///  - a linked portal shows its destination's name floating above it;
     ///  - map pins of coloured portals get a ring in their colour.
     /// Colour 0 (vanilla) restores the game's own look.
@@ -20,26 +20,21 @@ namespace Portaler
         private static readonly Dictionary<TeleportWorld, Orig> Originals = new Dictionary<TeleportWorld, Orig>();
         private static float _nextApply;
 
-        /// <summary>Original look of one particle system (restored for the vanilla colour).</summary>
-        private sealed class PsOrig
-        {
-            public ParticleSystem Ps;
-            public ParticleSystem.MinMaxGradient Start;
-            public bool OverLifetime;
-            public ParticleSystem.MinMaxGradient Life;
-        }
-
+        /// <summary>
+        /// The portal's fire ("blue flames" in the game's "target found" effect) is drawn with a gradient-mapped
+        /// shader: its colours come from a gradient texture in the material, not from the particle colour.
+        /// A coloured portal gets its own copy of that material with a gradient in its colour.
+        /// </summary>
         private sealed class Orig
         {
-            public List<PsOrig> Fire = new List<PsOrig>();
-            public List<KeyValuePair<Light, Color>> Lights = new List<KeyValuePair<Light, Color>>();
+            public List<KeyValuePair<Renderer, Material>> Fire = new List<KeyValuePair<Renderer, Material>>();
+            public string RampProperty;
             public int Applied = -1;
         }
 
         private static readonly AccessTools.FieldRef<EffectFade, ParticleSystem[]> FadeParticles =
             AccessTools.FieldRefAccess<EffectFade, ParticleSystem[]>("m_particles");
-        private static readonly AccessTools.FieldRef<EffectFade, Light> FadeLight =
-            AccessTools.FieldRefAccess<EffectFade, Light>("m_light");
+        private static readonly Dictionary<int, Texture2D> Ramps = new Dictionary<int, Texture2D>();
 
         public static void Register(TeleportWorld tw)
         {
@@ -68,10 +63,7 @@ namespace Portaler
             }
         }
 
-        /// <summary>
-        /// Only the fire around the portal takes the colour. The runes and the swirl inside the ring
-        /// (the game's "target found" effect) always keep their vanilla look.
-        /// </summary>
+        /// <summary>Only the fire around the portal takes the colour; runes, swirl, sparks and light stay vanilla.</summary>
         private static void Apply(TeleportWorld tw, int color)
         {
             if (!Originals.TryGetValue(tw, out var o))
@@ -82,47 +74,53 @@ namespace Portaler
                 Originals[tw] = o;
             }
             if (o.Applied == color) return;
+            o.Applied = color;
+            if (o.RampProperty == null) return;
             try
             {
-                if (color == 0)
+                foreach (var kv in o.Fire)
                 {
-                    foreach (var f in o.Fire)
+                    var r = kv.Key;
+                    if (r == null) continue;
+                    if (color == 0)
                     {
-                        if (f.Ps == null) continue;
-                        var m = f.Ps.main; m.startColor = f.Start;
-                        var col = f.Ps.colorOverLifetime; col.color = f.Life;
+                        if (r.sharedMaterial != kv.Value) { var own = r.sharedMaterial; r.sharedMaterial = kv.Value; if (own != null) Object.Destroy(own); }
                     }
-                    foreach (var l in o.Lights) if (l.Key != null) l.Key.color = l.Value;
-                }
-                else
-                {
-                    Color c = PortalColors.Values[PortalColors.Clamp(color)];
-                    foreach (var f in o.Fire)
+                    else
                     {
-                        if (f.Ps == null) continue;
-                        var m = f.Ps.main; m.startColor = new ParticleSystem.MinMaxGradient(c);
-                        // the fire's own colour change over its life would turn any colour red again: keep only its fading
-                        if (f.OverLifetime) { var col = f.Ps.colorOverLifetime; col.color = WhiteKeepAlpha(f.Life); }
+                        var mat = r.sharedMaterial == kv.Value ? (r.sharedMaterial = new Material(kv.Value)) : r.sharedMaterial;
+                        mat.SetTexture(o.RampProperty, Ramp(color));
                     }
-                    foreach (var l in o.Lights) if (l.Key != null) l.Key.color = c;
                 }
-                o.Applied = color;
             }
             catch (System.Exception e)
             {
-                o.Applied = color; // do not retry every tick
                 Plugin.Log.LogWarning("Portal colour: " + e.Message);
             }
         }
 
-        /// <summary>Same fading (alpha) as the original gradient, but white, so the start colour shows.</summary>
-        private static ParticleSystem.MinMaxGradient WhiteKeepAlpha(ParticleSystem.MinMaxGradient g)
+        /// <summary>Gradient for the fire: dark, then the colour, brightening towards white at the hottest part.</summary>
+        private static Texture2D Ramp(int color)
         {
-            var src = g.mode == ParticleSystemGradientMode.TwoGradients || g.mode == ParticleSystemGradientMode.Gradient ? g.gradientMax ?? g.gradient : null;
-            var grad = new Gradient();
-            var alpha = src != null ? src.alphaKeys : new[] { new GradientAlphaKey(1f, 0f), new GradientAlphaKey(1f, 1f) };
-            grad.SetKeys(new[] { new GradientColorKey(Color.white, 0f), new GradientColorKey(Color.white, 1f) }, alpha);
-            return new ParticleSystem.MinMaxGradient(grad);
+            if (Ramps.TryGetValue(color, out var tex) && tex != null) return tex;
+            Color c = PortalColors.Values[color];
+            const int w = 256;
+            tex = new Texture2D(w, 4, TextureFormat.RGBA32, false) { wrapMode = TextureWrapMode.Clamp, filterMode = FilterMode.Bilinear, hideFlags = HideFlags.HideAndDontSave };
+            var px = new Color[w * 4];
+            for (int x = 0; x < w; x++)
+            {
+                float t = x / (w - 1f);
+                Color col;
+                if (t < 0.3f) col = Color.Lerp(Color.black, c * 0.45f, t / 0.3f);
+                else if (t < 0.65f) col = Color.Lerp(c * 0.45f, c, (t - 0.3f) / 0.35f);
+                else col = Color.Lerp(c, Color.Lerp(c, Color.white, 0.75f), (t - 0.65f) / 0.35f);
+                col.a = Mathf.Clamp01(t * 4f);
+                for (int y = 0; y < 4; y++) px[y * w + x] = col;
+            }
+            tex.SetPixels(px);
+            tex.Apply();
+            Ramps[color] = tex;
+            return tex;
         }
 
         private static readonly HashSet<string> Dumped = new HashSet<string>();
@@ -132,26 +130,14 @@ namespace Portaler
             try
             {
                 var o = new Orig();
-                // the swirl inside the ring and its light stay vanilla
-                var inside = new HashSet<ParticleSystem>();
-                Light insideLight = null;
-                var fade = tw.m_target_found;
-                if (fade != null)
+                foreach (var r in tw.GetComponentsInChildren<ParticleSystemRenderer>(true))
                 {
-                    var parts = FadeParticles(fade);
-                    if (parts != null) foreach (var ps in parts) if (ps != null) inside.Add(ps);
-                    foreach (var ps in fade.GetComponentsInChildren<ParticleSystem>(true)) inside.Add(ps);
-                    insideLight = FadeLight(fade);
+                    var mat = r.sharedMaterial;
+                    if (mat == null || mat.shader == null || mat.shader.name.IndexOf("Gradient", System.StringComparison.OrdinalIgnoreCase) < 0) continue;
+                    o.Fire.Add(new KeyValuePair<Renderer, Material>(r, mat));
+                    if (o.RampProperty == null) o.RampProperty = FindRamp(mat.shader);
                 }
-                foreach (var ps in tw.GetComponentsInChildren<ParticleSystem>(true))
-                {
-                    if (inside.Contains(ps)) continue;
-                    var life = ps.colorOverLifetime;
-                    o.Fire.Add(new PsOrig { Ps = ps, Start = ps.main.startColor, OverLifetime = life.enabled, Life = life.color });
-                }
-                foreach (var l in tw.GetComponentsInChildren<Light>(true))
-                    if (l != insideLight && (fade == null || !l.transform.IsChildOf(fade.transform))) o.Lights.Add(new KeyValuePair<Light, Color>(l, l.color));
-                if (Perf.On) Dump(tw, inside, o);
+                if (Perf.On) Dump(tw, o);
                 return o;
             }
             catch (System.Exception e)
@@ -161,29 +147,34 @@ namespace Portaler
             }
         }
 
-        /// <summary>Developer log: which effects of this portal type get the colour (once per portal type).</summary>
-        private static void Dump(TeleportWorld tw, HashSet<ParticleSystem> inside, Orig o)
+        /// <summary>The gradient texture of a gradient-mapped shader: a texture property named like "gradient" or "ramp".</summary>
+        private static string FindRamp(Shader sh)
+        {
+            string other = null;
+            for (int i = 0; i < sh.GetPropertyCount(); i++)
+            {
+                if (sh.GetPropertyType(i) != UnityEngine.Rendering.ShaderPropertyType.Texture) continue;
+                string n = sh.GetPropertyName(i);
+                string l = n.ToLowerInvariant();
+                if (l.Contains("grad") || l.Contains("ramp")) return n;
+                if (n != "_MainTex" && other == null) other = n;
+            }
+            return other;
+        }
+
+        /// <summary>Developer log: the fire's material and shader properties (once per portal type).</summary>
+        private static void Dump(TeleportWorld tw, Orig o)
         {
             string type = tw.name.Replace("(Clone)", "");
             if (!Dumped.Add(type)) return;
-            var sb = new System.Text.StringBuilder($"[Perf] Portal effects of {type}:");
-            foreach (var ps in tw.GetComponentsInChildren<ParticleSystem>(true))
+            var sb = new System.Text.StringBuilder($"[Perf] Portal fire of {type}: {o.Fire.Count} renderer(s), gradient property = {o.RampProperty ?? "NOT FOUND"}");
+            foreach (var kv in o.Fire)
             {
-                var r = ps.GetComponent<ParticleSystemRenderer>();
-                var mat = r != null ? r.sharedMaterial : null;
-                sb.Append($"\n  {(inside.Contains(ps) ? "inside" : "FIRE  ")} {Path(ps.transform, tw.transform)} start={ps.main.startColor.color} life={(ps.colorOverLifetime.enabled ? "on" : "off")}" +
-                          $" mat={(mat != null ? mat.name + "/" + mat.shader.name : "-")}");
+                var sh = kv.Value.shader;
+                sb.Append($"\n  {kv.Key.name}: {kv.Value.name} / {sh.name}");
+                for (int i = 0; i < sh.GetPropertyCount(); i++) sb.Append($"\n    {sh.GetPropertyName(i)} ({sh.GetPropertyType(i)})");
             }
-            foreach (var l in tw.GetComponentsInChildren<Light>(true))
-                sb.Append($"\n  light {Path(l.transform, tw.transform)} color={l.color} {(o.Lights.Exists(k => k.Key == l) ? "COLOURED" : "vanilla")}");
             Plugin.Log.LogInfo(sb.ToString());
-        }
-
-        private static string Path(Transform t, Transform root)
-        {
-            string s = t.name;
-            while (t.parent != null && t.parent != root) { t = t.parent; s = t.name + "/" + s; }
-            return s;
         }
 
         // ---------- floating destination names ----------

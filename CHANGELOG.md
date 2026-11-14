@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.0.16 (developer build, not published)
+- Portal colours: the fire around the portal is drawn from a colour gradient in its material, not from the particle colour (that is why 1.0.15 showed no change). A coloured portal now gets its own copy of the fire material with a gradient in its colour. Runes, swirl, sparks and light stay vanilla.
+- Developer log lists the fire's shader properties once.
+
 ## 1.0.15 (developer build, not published)
 - Portal colours: only the fire around the portal takes the colour; the runes and the swirl inside stay vanilla.
 - Developer log lists each portal type's effects once (which ones get the colour).
