@@ -34,6 +34,7 @@ namespace Portaler
             public ParticleSystem.MinMaxGradient Start, Life, Speed, Custom1, Custom2;
             public bool HasCustom1, HasCustom2;
             public float Amount = 1f; // 1 = fully in the portal's colour, less = only a hint of it
+            public bool Mix;          // blend towards the colour instead of changing the hue (for the dark swirl)
         }
 
         private sealed class Orig
@@ -104,15 +105,15 @@ namespace Portaler
                 {
                     if (f.Ps == null) continue;
                     float a = f.Amount;
-                    var main = f.Ps.main; main.startColor = vanilla ? f.Start : Recolor(f.Start, c, a);
-                    var life = f.Ps.colorOverLifetime; life.color = vanilla ? f.Life : Recolor(f.Life, c, a);
-                    var speed = f.Ps.colorBySpeed; speed.color = vanilla ? f.Speed : Recolor(f.Speed, c, a);
+                    var main = f.Ps.main; main.startColor = vanilla ? f.Start : Recolor(f.Start, c, a, f.Mix);
+                    var life = f.Ps.colorOverLifetime; life.color = vanilla ? f.Life : Recolor(f.Life, c, a, f.Mix);
+                    var speed = f.Ps.colorBySpeed; speed.color = vanilla ? f.Speed : Recolor(f.Speed, c, a, f.Mix);
                     var cd = f.Ps.customData;
-                    if (f.HasCustom1) cd.SetColor(ParticleSystemCustomData.Custom1, vanilla ? f.Custom1 : Recolor(f.Custom1, c, a));
-                    if (f.HasCustom2) cd.SetColor(ParticleSystemCustomData.Custom2, vanilla ? f.Custom2 : Recolor(f.Custom2, c, a));
+                    if (f.HasCustom1) cd.SetColor(ParticleSystemCustomData.Custom1, vanilla ? f.Custom1 : Recolor(f.Custom1, c, a, f.Mix));
+                    if (f.HasCustom2) cd.SetColor(ParticleSystemCustomData.Custom2, vanilla ? f.Custom2 : Recolor(f.Custom2, c, a, f.Mix));
                 }
                 // the light inside the ring: a hint of the colour, like the glow
-                if (o.Light != null) o.Light.color = vanilla ? o.LightColor : Color.Lerp(o.LightColor, Recolor(o.LightColor, c), CenterTint);
+                if (o.Light != null && CenterTint > 0f) o.Light.color = vanilla ? o.LightColor : Color.Lerp(o.LightColor, Recolor(o.LightColor, c), CenterTint);
             }
             catch (System.Exception e)
             {
@@ -124,8 +125,20 @@ namespace Portaler
         /// <summary>How much of the portal's colour the glow in the middle of the ring takes (the fire takes all of it).</summary>
         private const float CenterTint = 0f; // vanilla centre for now (1.0.18 tried 0.4)
 
-        private static Color Recolor(Color orig, Color target, float amount) =>
-            amount >= 1f ? Recolor(orig, target) : Color.Lerp(orig, Recolor(orig, target), amount);
+        private static Color Recolor(Color orig, Color target, float amount, bool mix)
+        {
+            if (mix)
+            {
+                // the dark swirl is almost black: a hue change would keep it black, so blend it towards a darker portal colour
+                var m = Color.Lerp(orig, target * SwirlBrightness, amount);
+                m.a = orig.a;
+                return m;
+            }
+            return amount >= 1f ? Recolor(orig, target) : Color.Lerp(orig, Recolor(orig, target), amount);
+        }
+
+        /// <summary>The dark swirl in the middle: how far it moves towards the portal colour, and how dark that colour is.</summary>
+        private const float SwirlTint = 0.5f, SwirlBrightness = 0.55f;
 
         private static Color Recolor(Color orig, Color target)
         {
@@ -136,31 +149,31 @@ namespace Portaler
             return n;
         }
 
-        private static Gradient Recolor(Gradient g, Color target, float amount)
+        private static Gradient Recolor(Gradient g, Color target, float amount, bool mix)
         {
             if (g == null) return null;
             var keys = g.colorKeys;
-            for (int i = 0; i < keys.Length; i++) keys[i].color = Recolor(keys[i].color, target, amount);
+            for (int i = 0; i < keys.Length; i++) keys[i].color = Recolor(keys[i].color, target, amount, mix);
             var n = new Gradient { mode = g.mode };
             n.SetKeys(keys, g.alphaKeys);
             return n;
         }
 
-        private static ParticleSystem.MinMaxGradient Recolor(ParticleSystem.MinMaxGradient g, Color target, float amount)
+        private static ParticleSystem.MinMaxGradient Recolor(ParticleSystem.MinMaxGradient g, Color target, float amount, bool mix)
         {
             switch (g.mode)
             {
                 case ParticleSystemGradientMode.Color:
-                    return new ParticleSystem.MinMaxGradient(Recolor(g.color, target, amount));
+                    return new ParticleSystem.MinMaxGradient(Recolor(g.color, target, amount, mix));
                 case ParticleSystemGradientMode.TwoColors:
-                    return new ParticleSystem.MinMaxGradient(Recolor(g.colorMin, target, amount), Recolor(g.colorMax, target, amount));
+                    return new ParticleSystem.MinMaxGradient(Recolor(g.colorMin, target, amount, mix), Recolor(g.colorMax, target, amount, mix));
                 case ParticleSystemGradientMode.Gradient:
-                    return new ParticleSystem.MinMaxGradient(Recolor(g.gradient, target, amount));
+                    return new ParticleSystem.MinMaxGradient(Recolor(g.gradient, target, amount, mix));
                 case ParticleSystemGradientMode.TwoGradients:
-                    return new ParticleSystem.MinMaxGradient(Recolor(g.gradientMin, target, amount), Recolor(g.gradientMax, target, amount));
+                    return new ParticleSystem.MinMaxGradient(Recolor(g.gradientMin, target, amount, mix), Recolor(g.gradientMax, target, amount, mix));
                 case ParticleSystemGradientMode.RandomColor:
                 {
-                    var r = new ParticleSystem.MinMaxGradient(Recolor(g.gradient, target, amount)) { mode = ParticleSystemGradientMode.RandomColor };
+                    var r = new ParticleSystem.MinMaxGradient(Recolor(g.gradient, target, amount, mix)) { mode = ParticleSystemGradientMode.RandomColor };
                     return r;
                 }
                 default:
@@ -184,8 +197,9 @@ namespace Portaler
                     if (mat == null || mat.shader == null) continue;
                     string shader = mat.shader.name;
                     bool fire = shader.IndexOf("Gradient", System.StringComparison.OrdinalIgnoreCase) >= 0;
-                    bool glow = shader.IndexOf("Alpha Blended", System.StringComparison.OrdinalIgnoreCase) >= 0; // the glow in the middle of the ring
-                    if (!fire && !glow) continue; // the dark swirl and the sparks stay vanilla
+                    bool glow = CenterTint > 0f && shader.IndexOf("Alpha Blended", System.StringComparison.OrdinalIgnoreCase) >= 0; // glow in the middle of the ring
+                    bool swirl = shader.IndexOf("Surface", System.StringComparison.OrdinalIgnoreCase) >= 0; // the dark swirl in the middle
+                    if (!fire && !glow && !swirl) continue; // the sparks stay vanilla
                     var ps = r.GetComponent<ParticleSystem>();
                     if (ps == null) continue;
                     var cd = ps.customData;
@@ -194,7 +208,8 @@ namespace Portaler
                         Ps = ps, Start = ps.main.startColor, Life = ps.colorOverLifetime.color, Speed = ps.colorBySpeed.color,
                         HasCustom1 = cd.enabled && cd.GetMode(ParticleSystemCustomData.Custom1) == ParticleSystemCustomDataMode.Color,
                         HasCustom2 = cd.enabled && cd.GetMode(ParticleSystemCustomData.Custom2) == ParticleSystemCustomDataMode.Color,
-                        Amount = fire ? 1f : CenterTint,
+                        Amount = fire ? 1f : swirl ? SwirlTint : CenterTint,
+                        Mix = swirl && !fire,
                     };
                     if (f.HasCustom1) f.Custom1 = cd.GetColor(ParticleSystemCustomData.Custom1);
                     if (f.HasCustom2) f.Custom2 = cd.GetColor(ParticleSystemCustomData.Custom2);

@@ -1,5 +1,8 @@
 # Changelog
 
+## 1.0.20 (developer build, not published)
+- The dark swirl in the middle of the portal takes a darker shade of the portal's colour (blended halfway); the light glow, sparks and light stay vanilla.
+
 ## 1.0.19 (developer build, not published)
 - The middle of the portal is vanilla again (for comparing); runes and fire keep the portal's colour.
 
