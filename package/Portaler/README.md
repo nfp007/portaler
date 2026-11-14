@@ -121,8 +121,7 @@ Every feature says what is **🌐 shared** (the same for everybody on the server
 
 **12. One-way links and portal colours**
 - **Link a portal to one destination**: walk into a linked portal and you travel straight there, without the list, just like the game's own portal pairs. Handy for a direct road between two bases.
-- Standing in a portal, hover another portal in the list or on the map and press **L**, or right click it → "Link this portal here". A small window asks **one way** or **both ways**, and the portal's colour.
-- Right click any portal → "Link it to…" links any two portals, wherever you stand.
+- Standing in a portal, hover another portal in the list or on the map and press **L**, or right click it → **Link…**. A window in the middle of the screen shows **From** and **To**: walking into "From" takes you to "To". **Change…** picks another portal for either end, **Swap** turns the direction. Choose **both ways** (default) or **one way**, and a colour.
 - Looking at a portal in the world: **L** links it (the map opens to pick the destination), or removes its link (press L twice).
 - Linked portals show the destination's name floating above them (within 20 m), and "Leads to: …" in their hover text. In the list: "Mine → BASE Plains".
 - From any other portal you can still travel *to* a linked portal as usual. If a destination is destroyed, the link is dropped.

@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.0.21 (developer build, not published)
+- Clearer linking: the right-click menu has one "Link..." item. The menu title shows the portal and where it leads, and a line says where you are.
+- New link dialog in the middle of the screen: "From" and "To" with Change... (pick another portal in the list or on the map), Swap, direction (default both ways) and colour (default vanilla, or the colour the portal already has).
+- Colour, category and players windows also open in the middle of the screen; the map behind them is darkened and ignores clicks.
+
 ## 1.0.20 (developer build, not published)
 - The dark swirl in the middle of the portal takes a darker shade of the portal's colour (blended halfway); the light glow, sparks and light stay vanilla.
 

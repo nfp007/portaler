@@ -46,7 +46,7 @@ namespace Portaler
         public static bool BlocksKeys => SearchFocused || WindowOpen;
 
         /// <summary>A Portaler window (menu, link dialog, colour, category, players) is open over the list.</summary>
-        public static bool WindowOpen => _picker != null || _playersOpen || _menuFor != null || _linkFrom != null || _colorFor != null;
+        public static bool WindowOpen => _picker != null || _playersOpen || _menuFor != null || _linkOpen || _colorFor != null;
 
         // category filter (0 = all) and category window
         private static int _catFilter;
@@ -130,12 +130,16 @@ namespace Portaler
             if (ev.rawType == EventType.MouseUp) _pressedInList = false;
 
             // Category window: handled before the list so the list never sees these clicks.
+            // a press on any Portaler window must not reach the map underneath
+            if (WindowOpen && ev.type == EventType.MouseDown) _modalPress = true;
             if (_picker != null) PickerInput(ev);
             else if (_playersOpen) PlayersInput(ev);
             else if (_menuFor != null) MenuInput(ev);
-            else if (_linkFrom != null) LinkInput(ev);
+            else if (_linkOpen) LinkInput(ev);
             else if (_colorFor != null) ColorInput(ev);
-            else if (_pickFrom != null && ev.type == EventType.KeyDown && ev.keyCode == KeyCode.Escape && !SearchFocused) { _pickFrom = null; ev.Use(); }
+            else if (_pickEnd >= 0 && ev.type == EventType.KeyDown && ev.keyCode == KeyCode.Escape && !SearchFocused) { _pickEnd = -1; _linkOpen = true; ev.Use(); }
+            // the map handled its click before this mouse-up reached us: from now on it may react again
+            if (ev.rawType == EventType.MouseUp) _modalPress = false;
 
             // A drag that lost its mouse-up (button released outside the game window) ends here.
             if (ev.type == EventType.MouseMove) { _drag = null; _dragGroup = null; }
@@ -190,8 +194,10 @@ namespace Portaler
 
                 _scroll = GUILayout.BeginScrollView(_scroll, false, true, GUIStyle.none, _scrollbar);
 
-                if (_pickFrom != null)
-                    GUILayout.Label($"Choose where \"{_pickFrom.DisplayName}\" leads: click a name or a map pin.  Esc cancels.", _pickHint);
+                if (_pickEnd >= 0)
+                    GUILayout.Label(_pickEnd == 1
+                        ? $"Choose where \"{_linkFrom?.DisplayName}\" leads: click a name or a map pin.  Esc goes back."
+                        : $"Choose the portal that leads to \"{_linkTo?.DisplayName}\": click a name or a map pin.  Esc goes back.", _pickHint);
                 var m = GetModel(ev);
                 bool filtering = m.Filtering;
                 _filtering = filtering;
@@ -227,17 +233,18 @@ namespace Portaler
             if (ev.type == EventType.Repaint)
             {
                 HoveredPortal = MouseOverList && _drag == null && _dragGroup == null && !WindowOpen ? _hovered : null;
+                if (_picker != null || _playersOpen || _linkOpen || _colorFor != null) DimScreen();
                 if (_picker != null) DrawPicker(ev);
                 if (_playersOpen) DrawPlayers(ev);
                 if (_menuFor != null) DrawMenu(ev);
-                if (_linkFrom != null) DrawLink(ev);
+                if (_linkOpen) DrawLink(ev);
                 if (_colorFor != null) DrawColor(ev);
             }
 
             if (toggle != null) PortalClient.ToggleFavorite(toggle);
             else if (travel != null)
             {
-                if (_pickFrom != null) PickTarget(travel);
+                if (_pickEnd >= 0) PickTarget(travel);
                 else PortalClient.TeleportTo(travel);
             }
         }
@@ -680,8 +687,12 @@ namespace Portaler
             if (here)
             {
                 if (ev.type == EventType.Repaint) DrawRowVisual(r, p, "here", index, handle, opt);
-                // swallow left clicks: you cannot travel to the portal you are standing in
-                if (ev.type == EventType.MouseDown && ev.button == 0 && r.Contains(ev.mousePosition)) ev.Use();
+                // swallow left clicks: you cannot travel to the portal you are standing in (but you can pick it for a link)
+                if (ev.type == EventType.MouseDown && ev.button == 0 && r.Contains(ev.mousePosition))
+                {
+                    if (_pickEnd >= 0) travel = p;
+                    ev.Use();
+                }
             }
             else
             {
@@ -811,10 +822,9 @@ namespace Portaler
 
         private static Rect PlayersRect(int n)
         {
-            float w = _rect.width - 40f;
             float h = 70f + Mathf.Max(1, n) * (PlayerRowH + 6f) + 56f;
-            h = Mathf.Min(h, _rect.height - 170f);
-            return new Rect(_rect.x + 20f, _rect.y + 150f, w, h);
+            h = Mathf.Min(h, Screen.height - 80f);
+            return Centered(460f, h);
         }
 
         private static Rect PlayerRow(Rect pr, int i) => new Rect(pr.x + 12f, pr.y + 66f + i * (PlayerRowH + 6f), pr.width - 24f, PlayerRowH);
@@ -896,56 +906,69 @@ namespace Portaler
         public static Font ValheimFont { get; private set; }
 
         private static GUIStyle _linkTag, _pickHint, _menuText, _keyText;
-        private static Texture2D _arrowLink, _arrowLinkBack;
+        private static Texture2D _arrowLink, _arrowLinkBack, _arrowSwap;
 
-        private sealed class MenuItem { public string Text, Key; public System.Action Act; }
+        private sealed class MenuItem { public string Text, Key, Dest; public System.Action Act; }
         private static PortalInfo _menuFor;
         private static Vector2 _menuPos;
         private static readonly List<MenuItem> MenuItems = new List<MenuItem>();
 
-        private static PortalInfo _linkFrom, _linkTo, _colorFor, _pickFrom;
-        private static bool _linkBoth;
+        // link dialog: both ends, direction and colour; picking replaces one end and comes back to the dialog
+        private static PortalInfo _linkFrom, _linkTo, _colorFor;
+        private static bool _linkOpen, _linkBoth = true;
         private static int _linkColor;
+        private static int _pickEnd = -1; // -1 = not picking, 0 = choosing "From", 1 = choosing "To"
 
-        /// <summary>The list is waiting for the player to choose where a portal leads.</summary>
-        public static bool Picking => _pickFrom != null && PortalClient.Active;
+        /// <summary>The list is waiting for the player to choose a portal for the link dialog.</summary>
+        public static bool Picking => _pickEnd >= 0 && PortalClient.Active;
+
+        /// <summary>A Portaler window got the last mouse press: the map underneath must not react to it.</summary>
+        private static bool _modalPress;
+        public static bool MapBlocked => WindowOpen || _modalPress;
 
         private static void CloseWindows()
         {
-            _menuFor = null; _linkFrom = null; _linkTo = null; _colorFor = null; _pickFrom = null; _picker = null;
+            _menuFor = null; _linkOpen = false; _linkFrom = null; _linkTo = null; _colorFor = null; _pickEnd = -1; _picker = null; _playersOpen = false;
         }
 
         private static PortalInfo SourcePortal => PortalClient.Get(PortalClient.SourceId);
 
-        /// <summary>L on a name or pin: link the portal you stand in to it.</summary>
-        private static void LinkFromHere(PortalInfo to)
+        /// <summary>L on a name or pin, or "Link..." in the menu: from the portal you stand in to the clicked one.</summary>
+        private static void LinkFromHere(PortalInfo clicked)
         {
-            var from = SourcePortal;
-            if (from == null || to == null || to.Id == from.Id) return;
-            OpenLinkDialog(from, to);
+            if (clicked == null) return;
+            var src = SourcePortal;
+            if (src == null || src.Id == clicked.Id) OpenLinkDialog(clicked, null); // your own portal: choose where it leads
+            else OpenLinkDialog(src, clicked);
         }
 
+        /// <summary>L in the world on a portal without a link: choose its destination right away.</summary>
         public static void BeginPick(PortalInfo from)
         {
-            CloseWindows();
-            _pickFrom = from;
+            OpenLinkDialog(from, null);
+            _linkOpen = false;
+            _pickEnd = 1;
         }
 
-        /// <summary>A destination was chosen while picking (list row or map pin).</summary>
-        public static void PickTarget(PortalInfo to)
+        /// <summary>A portal was chosen while picking (list row or map pin): it becomes that end of the link.</summary>
+        public static void PickTarget(PortalInfo p)
         {
-            var from = _pickFrom;
-            if (from == null || to == null || to.Id == from.Id) return;
-            _pickFrom = null;
-            OpenLinkDialog(from, to);
+            if (_pickEnd < 0 || p == null) return;
+            var other = _pickEnd == 0 ? _linkTo : _linkFrom;
+            if (other != null && other.Id == p.Id) return; // a portal cannot lead to itself
+            if (_pickEnd == 0) { _linkFrom = p; if (_linkColor == 0) _linkColor = p.Color; }
+            else _linkTo = p;
+            _pickEnd = -1;
+            _linkOpen = true;
         }
 
         private static void OpenLinkDialog(PortalInfo from, PortalInfo to)
         {
             CloseWindows();
             _linkFrom = from; _linkTo = to;
-            _linkBoth = false;
-            _linkColor = from.Color;
+            _linkBoth = true;                         // default: both ways
+            _linkColor = from != null ? from.Color : 0; // default: vanilla (or the colour the portal already has)
+            _linkOpen = true;
         }
 
         public static void OpenColorWindow(PortalInfo p)
@@ -966,11 +989,10 @@ namespace Portaler
             var src = SourcePortal;
             if (src == null || p.Id != src.Id)
                 MenuItems.Add(new MenuItem { Text = "Travel here", Act = () => PortalClient.TeleportTo(p) });
-            if (src != null && p.Id != src.Id)
-                MenuItems.Add(new MenuItem { Text = "Link this portal here", Key = Plugin.LinkKey.Value.ToString(), Act = () => OpenLinkDialog(src, p) });
-            MenuItems.Add(new MenuItem { Text = "Link it to...", Act = () => BeginPick(p) });
-            if (PortalClient.LinkOf(p) != null)
-                MenuItems.Add(new MenuItem { Text = "Remove link", Act = () => PortalClient.SetLink(p, null) });
+            MenuItems.Add(new MenuItem { Text = "Link...", Key = Plugin.LinkKey.Value.ToString(), Act = () => LinkFromHere(p) });
+            var dest = PortalClient.LinkOf(p);
+            if (dest != null)
+                MenuItems.Add(new MenuItem { Text = "Remove link", Dest = dest.DisplayName, Act = () => PortalClient.SetLink(p, null) });
             MenuItems.Add(new MenuItem { Text = "Colour...", Key = Plugin.ColorKey.Value.ToString(), Act = () => OpenColorWindow(p) });
             var fav = PortalClient.GetFav(p);
             MenuItems.Add(new MenuItem
@@ -982,17 +1004,17 @@ namespace Portaler
             MenuItems.Add(new MenuItem { Text = "Rename", Key = Plugin.RenameKey.Value.ToString(), Act = () => PortalClient.BeginRename(p) });
         }
 
-        private const float MenuW = 300f, MenuItemH = 34f, MenuGap = 4f;
+        private const float MenuW = 320f, MenuItemH = 34f, MenuGap = 4f, MenuTop = 64f;
 
         private static Rect MenuRect()
         {
-            float h = 44f + MenuItems.Count * (MenuItemH + MenuGap) + 8f;
+            float h = MenuTop + MenuItems.Count * (MenuItemH + MenuGap) + 8f;
             float x = Mathf.Min(_menuPos.x + 4f, Screen.width - MenuW - 4f);
             float y = Mathf.Min(_menuPos.y, Screen.height - h - 4f);
             return new Rect(Mathf.Max(4f, x), Mathf.Max(4f, y), MenuW, h);
         }
 
-        private static Rect MenuItemRect(Rect mr, int i) => new Rect(mr.x + 12f, mr.y + 40f + i * (MenuItemH + MenuGap), mr.width - 24f, MenuItemH);
+        private static Rect MenuItemRect(Rect mr, int i) => new Rect(mr.x + 12f, mr.y + MenuTop + i * (MenuItemH + MenuGap), mr.width - 24f, MenuItemH);
 
         private static void MenuInput(Event ev)
         {
@@ -1000,6 +1022,7 @@ namespace Portaler
             if (ev.type == EventType.KeyDown && ev.keyCode == KeyCode.Escape) { _menuFor = null; ev.Use(); return; }
             if (ev.type == EventType.MouseDown)
             {
+                _modalPress = true;
                 for (int i = 0; i < MenuItems.Count; i++)
                     if (ev.button == 0 && MenuItemRect(mr, i).Contains(ev.mousePosition))
                     {
@@ -1016,34 +1039,62 @@ namespace Portaler
             if (ev.isMouse || ev.type == EventType.ScrollWheel) ev.Use();
         }
 
+        /// <summary>"Name  -> Destination" on one line (arrow drawn, destination in the small italic style).</summary>
+        private static void DrawLinkLabel(Rect r, GUIStyle style, string name, string dest)
+        {
+            style.Draw(r, Tmp(name), false, false, false, false);
+            if (dest == null) return;
+            float x = r.x + style.CalcSize(Tmp(name)).x + 4f;
+            var old = GUI.color; GUI.color = new Color32(255, 214, 140, 255);
+            GUI.DrawTexture(new Rect(x, r.y + (r.height - 14f) / 2f, 14f, 14f), _arrowLink);
+            GUI.color = old;
+            _linkTag.Draw(new Rect(x + 18f, r.y, Mathf.Max(10f, r.xMax - x - 18f), r.height), Tmp(dest), false, false, false, false);
+        }
+
         private static void DrawMenu(Event ev)
         {
             var mr = MenuRect();
             DrawBoard(mr, "picker", 1);
-            _pickerTitle.Draw(new Rect(mr.x + 14f, mr.y + 8f, mr.width - 28f, 26f), Tmp(_menuFor.DisplayName), false, false, false, false);
+            var dest = PortalClient.LinkOf(_menuFor);
+            DrawLinkLabel(new Rect(mr.x + 14f, mr.y + 8f, mr.width - 28f, 26f), _pickerTitle, _menuFor.DisplayName, dest?.DisplayName);
+            var src = SourcePortal;
+            string where = src == null ? "" : src.Id == _menuFor.Id ? "You are here" : "You are at: " + src.DisplayName;
+            _placeholder.Draw(new Rect(mr.x + 14f, mr.y + 34f, mr.width - 28f, 22f), Tmp(where), false, false, false, false);
             for (int i = 0; i < MenuItems.Count; i++)
             {
                 var r = MenuItemRect(mr, i);
                 DrawBoard(r, r.Contains(ev.mousePosition) ? "row-hover" : "row", i);
-                _menuText.Draw(r, Tmp(MenuItems[i].Text), false, false, false, false);
-                if (!string.IsNullOrEmpty(MenuItems[i].Key))
+                var it = MenuItems[i];
+                if (it.Dest != null) DrawLinkLabel(new Rect(r.x, r.y, r.width - 10f, r.height), _menuText, it.Text, it.Dest);
+                else _menuText.Draw(r, Tmp(it.Text), false, false, false, false);
+                if (!string.IsNullOrEmpty(it.Key))
                 {
                     var kr = new Rect(r.xMax - 34f, r.y + 6f, 24f, r.height - 12f);
                     DrawBoard(kr, "search", 0);
-                    _keyText.Draw(kr, Tmp(MenuItems[i].Key), false, false, false, false);
+                    _keyText.Draw(kr, Tmp(it.Key), false, false, false, false);
                 }
             }
         }
 
-        // ----- link dialog -----
+        // ----- link dialog (middle of the screen) -----
 
-        private static Rect LinkRect() => new Rect(_rect.x + 20f, _rect.y + 150f, _rect.width - 40f, 360f);
-        private static Rect DirRect(Rect lr, int i) { float w = (lr.width - 40f - 8f) / 2f; return new Rect(lr.x + 20f + i * (w + 8f), lr.y + 108f, w, 36f); }
-        private static Rect SwatchRect(Rect lr, int i) { float step = (lr.width - 40f) / PortalColors.Count; return new Rect(lr.x + 20f + i * step + (step - 28f) / 2f, lr.y + 186f, 28f, 28f); }
-        private static Rect LinkButton(Rect lr, int i) { float w = (lr.width - 40f - 8f) / 2f; return new Rect(lr.x + 20f + i * (w + 8f), lr.yMax - 54f, w, 38f); }
+        private static Rect Centered(float w, float h) =>
+            new Rect(Mathf.Round((Screen.width - w) / 2f), Mathf.Round(Mathf.Max(10f, (Screen.height - h) / 2f)), w, h);
+
+        private const float LinkW = 560f, LinkH = 440f;
+        private static Rect LinkRect() => Centered(LinkW, LinkH);
+        private static Rect EndBox(Rect lr, int end) => new Rect(lr.x + 82f, lr.y + (end == 0 ? 76f : 160f), lr.width - 82f - 22f - 154f, 36f);
+        private static Rect ChangeButton(Rect lr, int end) { var b = EndBox(lr, end); return new Rect(b.xMax + 8f, b.y, 146f, 36f); }
+        private static Rect SwapButton(Rect lr) { var b = EndBox(lr, 0); return new Rect(b.x, b.yMax + 6f, b.width, 30f); }
+        private static Rect DirRect(Rect lr, int i) { float w = (lr.width - 44f - 8f) / 2f; return new Rect(lr.x + 22f + i * (w + 8f), lr.y + 236f, w, 36f); }
+        private static Rect SwatchRect(Rect lr, int i) { float step = (lr.width - 44f) / PortalColors.Count; return new Rect(lr.x + 22f + i * step + (step - 28f) / 2f, lr.y + 312f, 28f, 28f); }
+        private static Rect LinkButton(Rect lr, int i) { float w = (lr.width - 44f - 8f) / 2f; return new Rect(lr.x + 22f + i * (w + 8f), lr.yMax - 54f, w, 38f); }
+
+        private static bool LinkReady => _linkFrom != null && _linkTo != null && _linkFrom.Id != _linkTo.Id;
 
         private static void DoLink()
         {
+            if (!LinkReady) return;
             PortalClient.SetLink(_linkFrom, _linkTo);
             if (_linkFrom.Color != _linkColor) PortalClient.SetColor(_linkFrom, _linkColor);
             if (_linkBoth)
@@ -1053,7 +1104,7 @@ namespace Portaler
             }
             Player.m_localPlayer?.Message(MessageHud.MessageType.Center,
                 _linkBoth ? $"{_linkFrom.DisplayName} and {_linkTo.DisplayName} now lead to each other" : $"{_linkFrom.DisplayName} now leads to {_linkTo.DisplayName}", 0, null);
-            _linkFrom = null; _linkTo = null;
+            CloseWindows();
         }
 
         private static void LinkInput(Event ev)
@@ -1061,18 +1112,22 @@ namespace Portaler
             var lr = LinkRect();
             if (ev.type == EventType.KeyDown)
             {
-                if (ev.keyCode == KeyCode.Escape) { _linkFrom = null; ev.Use(); return; }
+                if (ev.keyCode == KeyCode.Escape) { CloseWindows(); ev.Use(); return; }
                 if (ev.keyCode == KeyCode.Return || ev.keyCode == KeyCode.KeypadEnter) { DoLink(); ev.Use(); return; }
             }
             if (ev.type == EventType.MouseDown)
             {
+                _modalPress = true;
                 var mp = ev.mousePosition;
-                if (!lr.Contains(mp)) { _linkFrom = null; ev.Use(); return; }
+                ev.Use();
+                if (!lr.Contains(mp)) { CloseWindows(); return; }
+                for (int e = 0; e < 2; e++)
+                    if (ChangeButton(lr, e).Contains(mp)) { _pickEnd = e; _linkOpen = false; return; }
+                if (SwapButton(lr).Contains(mp) && _linkTo != null) { var t = _linkFrom; _linkFrom = _linkTo; _linkTo = t; return; }
                 for (int i = 0; i < 2; i++) if (DirRect(lr, i).Contains(mp)) _linkBoth = i == 1;
                 for (int i = 0; i < PortalColors.Count; i++) if (SwatchRect(lr, i).Contains(mp)) _linkColor = i;
                 if (LinkButton(lr, 0).Contains(mp)) DoLink();
-                else if (LinkButton(lr, 1).Contains(mp)) _linkFrom = null;
-                ev.Use();
+                else if (LinkButton(lr, 1).Contains(mp)) CloseWindows();
                 return;
             }
             if (ev.isMouse || ev.type == EventType.ScrollWheel) ev.Use();
@@ -1081,46 +1136,66 @@ namespace Portaler
         private static void DrawLink(Event ev)
         {
             var lr = LinkRect();
+            var mp = ev.mousePosition;
             DrawBoard(lr, "picker", 0);
-            _pickerTitle.Draw(new Rect(lr.x + 20f, lr.y + 12f, lr.width - 40f, 26f), Tmp("Link portal"), false, false, false, false);
-            // "from -> to"
-            float x = lr.x + 20f, y = lr.y + 44f;
-            var ts = _rowText.CalcSize(Tmp(_linkFrom.DisplayName));
-            _rowText.Draw(new Rect(x - _rowText.padding.left, y, ts.x + 4f, 30f), Tmp(_linkFrom.DisplayName), false, false, false, false);
-            x += ts.x - _rowText.padding.left + 8f;
-            var old = GUI.color; GUI.color = new Color32(255, 214, 140, 255);
-            GUI.DrawTexture(new Rect(x, y + 7f, 16f, 16f), _arrowLink);
-            if (_linkBoth) GUI.DrawTexture(new Rect(x - 6f, y + 7f, 16f, 16f), _arrowLinkBack); // both ways
-            GUI.color = old;
-            x += 24f;
-            _rowText.Draw(new Rect(x - _rowText.padding.left, y, lr.xMax - x, 30f), Tmp(_linkTo.DisplayName), false, false, false, false);
+            _pickerTitle.Draw(new Rect(lr.x + 22f, lr.y + 12f, lr.width - 44f, 26f), Tmp("Link portal"), false, false, false, false);
+            _placeholder.Draw(new Rect(lr.x + 22f, lr.y + 40f, lr.width - 44f, 22f), Tmp("Walking into \"From\" takes you straight to \"To\"."), false, false, false, false);
 
-            _sortLabel.Draw(new Rect(lr.x + 20f, lr.y + 82f, 200f, 22f), Tmp("Direction"), false, false, false, false);
+            for (int e = 0; e < 2; e++)
+            {
+                var box = EndBox(lr, e);
+                _sortLabel.Draw(new Rect(lr.x + 22f, box.y, 60f, box.height), Tmp(e == 0 ? "From" : "To"), false, false, false, false);
+                DrawBoard(box, "search", e);
+                var who = e == 0 ? _linkFrom : _linkTo;
+                if (who != null) _menuText.Draw(box, Tmp(who.DisplayName), false, false, false, false);
+                else _placeholder.Draw(new Rect(box.x + 14f, box.y, box.width - 14f, box.height), Tmp("press Change... to choose"), false, false, false, false);
+                var cb = ChangeButton(lr, e);
+                DrawBoard(cb, cb.Contains(mp) ? "sort-hover" : "sort", e + 3);
+                _sortText.Draw(cb, Tmp("Change..."), false, false, false, false);
+            }
+            var sb = SwapButton(lr);
+            DrawBoard(sb, _linkTo != null && sb.Contains(mp) ? "sort-hover" : "sort", 5);
+            var old = GUI.color; GUI.color = new Color32(255, 214, 140, 255);
+            float ax = sb.center.x - 40f;
+            GUI.DrawTexture(new Rect(ax, sb.y + 7f, 16f, 16f), _arrowSwap);
+            GUI.color = old;
+            _sortText.Draw(new Rect(ax + 18f, sb.y, 80f, sb.height), Tmp("Swap"), false, false, false, false);
+
+            _sortLabel.Draw(new Rect(lr.x + 22f, lr.y + 210f, 200f, 22f), Tmp("Direction"), false, false, false, false);
             for (int i = 0; i < 2; i++)
             {
                 var r = DirRect(lr, i);
                 bool on = _linkBoth == (i == 1);
-                DrawBoard(r, on ? "sort-on" : r.Contains(ev.mousePosition) ? "sort-hover" : "sort", i);
+                DrawBoard(r, on ? "sort-on" : r.Contains(mp) ? "sort-hover" : "sort", i);
                 _sortText.Draw(r, Tmp(i == 0 ? "one way" : "both ways"), false, false, false, false);
             }
 
-            _sortLabel.Draw(new Rect(lr.x + 20f, lr.y + 158f, lr.width - 40f, 22f), Tmp("Colour of the portal you link from"), false, false, false, false);
+            _sortLabel.Draw(new Rect(lr.x + 22f, lr.y + 284f, lr.width - 44f, 22f),
+                Tmp(_linkBoth ? "Colour of both portals" : "Colour of \"From\""), false, false, false, false);
             for (int i = 0; i < PortalColors.Count; i++)
             {
                 var r = SwatchRect(lr, i);
-                DrawSwatch(r, i, _linkColor == i, r.Contains(ev.mousePosition));
-                var nr = new Rect(r.center.x - 30f, r.yMax + 2f, 60f, 18f);
-                _keyText.Draw(nr, Tmp(PortalColors.Names[i]), false, false, false, false);
+                DrawSwatch(r, i, _linkColor == i, r.Contains(mp));
+                _keyText.Draw(new Rect(r.center.x - 30f, r.yMax + 2f, 60f, 18f), Tmp(PortalColors.Names[i]), false, false, false, false);
             }
-            _placeholder.Draw(new Rect(lr.x + 20f, lr.y + 240f, lr.width - 40f, 22f),
-                Tmp(_linkBoth ? "Both ways: the other portal gets the same colour." : "Vanilla = the game's normal glow."), false, false, false, false);
 
             for (int i = 0; i < 2; i++)
             {
                 var r = LinkButton(lr, i);
-                DrawBoard(r, i == 0 ? (r.Contains(ev.mousePosition) ? "close-hover" : "close") : (r.Contains(ev.mousePosition) ? "sort-hover" : "sort"), i);
+                bool enabled = i == 1 || LinkReady;
+                var oc = GUI.color; if (!enabled) GUI.color = new Color(1f, 1f, 1f, 0.45f);
+                DrawBoard(r, i == 0 ? (enabled && r.Contains(mp) ? "close-hover" : "close") : (r.Contains(mp) ? "sort-hover" : "sort"), i);
                 _closeText.Draw(r, Tmp(i == 0 ? "Link" : "Cancel"), false, false, false, false);
+                GUI.color = oc;
             }
+        }
+
+        /// <summary>Darken the screen behind a window in the middle of the screen.</summary>
+        private static void DimScreen()
+        {
+            var old = GUI.color; GUI.color = new Color(0f, 0f, 0f, 0.35f);
+            GUI.DrawTexture(new Rect(0, 0, Screen.width, Screen.height), Texture2D.whiteTexture);
+            GUI.color = old;
         }
 
         /// <summary>A round colour swatch; "Vanilla" is a dark disc with a slash.</summary>
@@ -1153,7 +1228,7 @@ namespace Portaler
 
         // ----- colour window -----
 
-        private static Rect ColorRect() => new Rect(_rect.x + 20f, _rect.y + 150f, _rect.width - 40f, 62f + 3f * (74f + 8f) + 10f);
+        private static Rect ColorRect() => Centered(480f, 62f + 3f * (74f + 8f) + 10f);
 
         private static Rect ColorTile(Rect cr, int i)
         {
@@ -1220,10 +1295,9 @@ namespace Portaler
 
         private static Rect PickerRect()
         {
-            float w = _rect.width - 40f;
             float tileH = 84f;
             float h = 70f + 3 * (tileH + 8f) + 10f;
-            return new Rect(_rect.x + 20f, _rect.y + 150f, w, h);
+            return Centered(480f, h);
         }
 
         private static Rect PickerTile(Rect pr, int i)
@@ -1713,6 +1787,7 @@ namespace Portaler
             _keyText = new GUIStyle(_sortText) { fontSize = 13 };
             _arrowLink = Art.Arrow(Color.white, 24);
             _arrowLinkBack = Art.ArrowLeft(Color.white, 24);
+            _arrowSwap = Art.SwapArrows(Color.white, 32);
 
             _smallText = new GUIStyle(_sortText) { fontSize = 14, padding = new RectOffset(4, 4, 0, 0), margin = new RectOffset(0, 0, 0, 0) };
             _smallLabel = new GUIStyle(_placeholder) { fontSize = 14, alignment = TextAnchor.MiddleRight };

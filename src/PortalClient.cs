@@ -875,6 +875,14 @@ namespace Portaler
 
         public static bool TryTeleportAtMapPoint(Vector3 worldPoint, float radius)
         {
+            if (PortalUI.Picking)
+            {
+                // choosing an end of a link: any portal, also the one you stand in
+                var pick = PortalAtMapPoint(worldPoint, radius);
+                if (pick == null) return false;
+                PortalUI.PickTarget(pick);
+                return true;
+            }
             PortalInfo best = null;
             float bestDist = radius;
             foreach (var p in Destinations)

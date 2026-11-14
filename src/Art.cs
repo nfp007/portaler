@@ -355,6 +355,30 @@ namespace Portaler
             return _ring;
         }
 
+        /// <summary>Two arrows, one up and one down (swap).</summary>
+        public static Texture2D SwapArrows(Color col, int size = 32)
+        {
+            var tex = new Texture2D(size, size, TextureFormat.RGBA32, false);
+            float w = size * 0.07f;
+            for (int y = 0; y < size; y++)
+                for (int x = 0; x < size; x++)
+                {
+                    var p = new Vector2(x + 0.5f, y + 0.5f);
+                    float l = size * 0.32f, r = size * 0.68f, top = size * 0.88f, bot = size * 0.12f, head = size * 0.18f;
+                    // left: arrow down (texture y goes up), right: arrow up
+                    float d1 = Mathf.Min(SegDist(p, new Vector2(l, top), new Vector2(l, bot)),
+                               Mathf.Min(SegDist(p, new Vector2(l, bot), new Vector2(l - head, bot + head)), SegDist(p, new Vector2(l, bot), new Vector2(l + head, bot + head))));
+                    float d2 = Mathf.Min(SegDist(p, new Vector2(r, bot), new Vector2(r, top)),
+                               Mathf.Min(SegDist(p, new Vector2(r, top), new Vector2(r - head, top - head)), SegDist(p, new Vector2(r, top), new Vector2(r + head, top - head))));
+                    float d = Mathf.Min(d1, d2) - w;
+                    tex.SetPixel(x, y, Px(new Color(col.r, col.g, col.b, Mathf.Clamp01(0.5f - d))));
+                }
+            tex.Apply();
+            tex.filterMode = FilterMode.Bilinear;
+            tex.hideFlags = HideFlags.HideAndDontSave;
+            return tex;
+        }
+
         /// <summary>Check mark for the player selector.</summary>
         public static Texture2D Check(Color col, int size = 32)
         {

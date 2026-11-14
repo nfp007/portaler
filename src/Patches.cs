@@ -73,7 +73,7 @@ namespace Portaler
             private static bool Prefix(Minimap __instance)
             {
                 if (!PortalClient.Active) return true;
-                if (PortalUI.ListHasMouse || PortalUI.WindowOpen) return false;
+                if (PortalUI.ListHasMouse || PortalUI.MapBlocked) return false;
                 var p = PortalClient.PortalAtMapPoint(ScreenToWorld(__instance, ZInput.pointerPosition), PinRadius(__instance) * 1.5f);
                 if (p == null) return true; // empty map: vanilla behaviour
                 Vector2 m = ZInput.pointerPosition;
@@ -137,7 +137,7 @@ namespace Portaler
             private static bool Prefix(Minimap __instance)
             {
                 if (!PortalClient.Active) return true;
-                if (PortalUI.MouseOverList) return false; // click was on our list
+                if (PortalUI.MouseOverList || PortalUI.MapBlocked) return false; // click was on our list or a window
                 Vector3 world = ScreenToWorld(__instance, ZInput.pointerPosition);
                 PortalClient.TryTeleportAtMapPoint(world, PinRadius(__instance) * 1.5f);
                 return false; // no pin checking / other map clicks while choosing
@@ -166,7 +166,7 @@ namespace Portaler
         {
             private static void Prefix(ref bool takeInput)
             {
-                if (PortalClient.Active && PortalUI.ListHasMouse) takeInput = false;
+                if (PortalClient.Active && (PortalUI.ListHasMouse || PortalUI.MapBlocked)) takeInput = false;
             }
         }
 
@@ -174,7 +174,7 @@ namespace Portaler
         [HarmonyPatch(typeof(Minimap), "OnMapLeftDown")]
         private static class Minimap_OnMapLeftDown
         {
-            private static bool Prefix() => !(PortalClient.Active && PortalUI.ListHasMouse);
+            private static bool Prefix() => !(PortalClient.Active && (PortalUI.ListHasMouse || PortalUI.MapBlocked));
         }
     
         /// <summary>Hide other mods' pins that sit on a portal (we already show ours there).</summary>
