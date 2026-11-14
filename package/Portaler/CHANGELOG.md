@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.0.18 (developer build, not published)
+- Gold is a little darker.
+- The glow in the middle of the ring and its light take a hint (40 %) of the portal's colour; the dark swirl and the sparks stay vanilla.
+
 ## 1.0.17 (developer build, not published)
 - Portal colours: the runes take the colour again (as in 1.0.14).
 - The fire's colours come from its particle colours (the shader has no gradient texture, so 1.0.16 changed nothing). They now get the portal's colour while keeping their brightness. The swirl inside, its sparks and light stay vanilla.

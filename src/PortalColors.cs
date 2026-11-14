@@ -11,7 +11,7 @@ namespace Portaler
             Color.clear,
             new Color32(110, 185, 255, 255),
             new Color32(110, 210, 110, 255),
-            new Color32(255, 205, 70, 255),
+            new Color32(222, 165, 40, 255),
             new Color32(235, 75, 55, 255),
             new Color32(180, 110, 240, 255),
             new Color32(60, 205, 190, 255),
