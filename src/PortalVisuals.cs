@@ -7,7 +7,7 @@ namespace Portaler
 {
     /// <summary>
     /// What portal colours and links look like:
-    ///  - the fire around portals loaded near the player burns in their colour (runes, swirl, sparks and light stay vanilla);
+    ///  - the runes and the fire of portals loaded near the player take their colour (swirl, sparks and light stay vanilla);
     ///  - a linked portal shows its destination's name floating above it;
     ///  - map pins of coloured portals get a ring in their colour.
     /// Colour 0 (vanilla) restores the game's own look.
@@ -21,20 +21,29 @@ namespace Portaler
         private static float _nextApply;
 
         /// <summary>
-        /// The portal's fire ("blue flames" in the game's "target found" effect) is drawn with a gradient-mapped
-        /// shader: its colours come from a gradient texture in the material, not from the particle colour.
-        /// A coloured portal gets its own copy of that material with a gradient in its colour.
+        /// A coloured portal: the runes on the frame and the fire around the ring take the colour.
+        /// The swirl inside the ring, its sparks and its light stay vanilla.
+        ///
+        /// The fire ("blue flames" in the game's "target found" effect) uses a gradient-mapped shader without a gradient
+        /// texture: its colours come from the particle colours (start colour, colour over lifetime, custom data).
+        /// Those get the portal's hue and saturation while keeping their own brightness, so the fire keeps its look.
         /// </summary>
+        private sealed class FireOrig
+        {
+            public ParticleSystem Ps;
+            public ParticleSystem.MinMaxGradient Start, Life, Speed, Custom1, Custom2;
+            public bool HasCustom1, HasCustom2;
+        }
+
         private sealed class Orig
         {
-            public List<KeyValuePair<Renderer, Material>> Fire = new List<KeyValuePair<Renderer, Material>>();
-            public string RampProperty;
+            public Color Emission;
+            public List<FireOrig> Fire = new List<FireOrig>();
             public int Applied = -1;
         }
 
         private static readonly AccessTools.FieldRef<EffectFade, ParticleSystem[]> FadeParticles =
             AccessTools.FieldRefAccess<EffectFade, ParticleSystem[]>("m_particles");
-        private static readonly Dictionary<int, Texture2D> Ramps = new Dictionary<int, Texture2D>();
 
         public static void Register(TeleportWorld tw)
         {
@@ -63,7 +72,6 @@ namespace Portaler
             }
         }
 
-        /// <summary>Only the fire around the portal takes the colour; runes, swirl, sparks and light stay vanilla.</summary>
         private static void Apply(TeleportWorld tw, int color)
         {
             if (!Originals.TryGetValue(tw, out var o))
@@ -75,22 +83,29 @@ namespace Portaler
             }
             if (o.Applied == color) return;
             o.Applied = color;
-            if (o.RampProperty == null) return;
             try
             {
-                foreach (var kv in o.Fire)
+                bool vanilla = !PortalColors.Has(color);
+                Color c = vanilla ? Color.white : PortalColors.Values[color];
+
+                // runes: the frame's glow (keep the strength of the original, emission colours go above 1)
+                if (vanilla) tw.m_colorTargetfound = o.Emission;
+                else
                 {
-                    var r = kv.Key;
-                    if (r == null) continue;
-                    if (color == 0)
-                    {
-                        if (r.sharedMaterial != kv.Value) { var own = r.sharedMaterial; r.sharedMaterial = kv.Value; if (own != null) Object.Destroy(own); }
-                    }
-                    else
-                    {
-                        var mat = r.sharedMaterial == kv.Value ? (r.sharedMaterial = new Material(kv.Value)) : r.sharedMaterial;
-                        mat.SetTexture(o.RampProperty, Ramp(color));
-                    }
+                    float strength = Mathf.Max(1f, Mathf.Max(o.Emission.r, Mathf.Max(o.Emission.g, o.Emission.b)));
+                    tw.m_colorTargetfound = new Color(c.r * strength, c.g * strength, c.b * strength, o.Emission.a);
+                }
+
+                // fire
+                foreach (var f in o.Fire)
+                {
+                    if (f.Ps == null) continue;
+                    var main = f.Ps.main; main.startColor = vanilla ? f.Start : Recolor(f.Start, c);
+                    var life = f.Ps.colorOverLifetime; life.color = vanilla ? f.Life : Recolor(f.Life, c);
+                    var speed = f.Ps.colorBySpeed; speed.color = vanilla ? f.Speed : Recolor(f.Speed, c);
+                    var cd = f.Ps.customData;
+                    if (f.HasCustom1) cd.SetColor(ParticleSystemCustomData.Custom1, vanilla ? f.Custom1 : Recolor(f.Custom1, c));
+                    if (f.HasCustom2) cd.SetColor(ParticleSystemCustomData.Custom2, vanilla ? f.Custom2 : Recolor(f.Custom2, c));
                 }
             }
             catch (System.Exception e)
@@ -99,28 +114,46 @@ namespace Portaler
             }
         }
 
-        /// <summary>Gradient for the fire: dark, then the colour, brightening towards white at the hottest part.</summary>
-        private static Texture2D Ramp(int color)
+        /// <summary>Same brightness and alpha, the portal colour's hue; saturation scaled so white-hot parts stay white.</summary>
+        private static Color Recolor(Color orig, Color target)
         {
-            if (Ramps.TryGetValue(color, out var tex) && tex != null) return tex;
-            Color c = PortalColors.Values[color];
-            const int w = 256;
-            tex = new Texture2D(w, 4, TextureFormat.RGBA32, false) { wrapMode = TextureWrapMode.Clamp, filterMode = FilterMode.Bilinear, hideFlags = HideFlags.HideAndDontSave };
-            var px = new Color[w * 4];
-            for (int x = 0; x < w; x++)
+            Color.RGBToHSV(orig, out _, out float s, out float v);
+            Color.RGBToHSV(target, out float th, out float ts, out _);
+            var n = Color.HSVToRGB(th, Mathf.Clamp01(ts * Mathf.Max(s, 0.15f)), v, true);
+            n.a = orig.a;
+            return n;
+        }
+
+        private static Gradient Recolor(Gradient g, Color target)
+        {
+            if (g == null) return null;
+            var keys = g.colorKeys;
+            for (int i = 0; i < keys.Length; i++) keys[i].color = Recolor(keys[i].color, target);
+            var n = new Gradient { mode = g.mode };
+            n.SetKeys(keys, g.alphaKeys);
+            return n;
+        }
+
+        private static ParticleSystem.MinMaxGradient Recolor(ParticleSystem.MinMaxGradient g, Color target)
+        {
+            switch (g.mode)
             {
-                float t = x / (w - 1f);
-                Color col;
-                if (t < 0.3f) col = Color.Lerp(Color.black, c * 0.45f, t / 0.3f);
-                else if (t < 0.65f) col = Color.Lerp(c * 0.45f, c, (t - 0.3f) / 0.35f);
-                else col = Color.Lerp(c, Color.Lerp(c, Color.white, 0.75f), (t - 0.65f) / 0.35f);
-                col.a = Mathf.Clamp01(t * 4f);
-                for (int y = 0; y < 4; y++) px[y * w + x] = col;
+                case ParticleSystemGradientMode.Color:
+                    return new ParticleSystem.MinMaxGradient(Recolor(g.color, target));
+                case ParticleSystemGradientMode.TwoColors:
+                    return new ParticleSystem.MinMaxGradient(Recolor(g.colorMin, target), Recolor(g.colorMax, target));
+                case ParticleSystemGradientMode.Gradient:
+                    return new ParticleSystem.MinMaxGradient(Recolor(g.gradient, target));
+                case ParticleSystemGradientMode.TwoGradients:
+                    return new ParticleSystem.MinMaxGradient(Recolor(g.gradientMin, target), Recolor(g.gradientMax, target));
+                case ParticleSystemGradientMode.RandomColor:
+                {
+                    var r = new ParticleSystem.MinMaxGradient(Recolor(g.gradient, target)) { mode = ParticleSystemGradientMode.RandomColor };
+                    return r;
+                }
+                default:
+                    return g;
             }
-            tex.SetPixels(px);
-            tex.Apply();
-            Ramps[color] = tex;
-            return tex;
         }
 
         private static readonly HashSet<string> Dumped = new HashSet<string>();
@@ -129,13 +162,23 @@ namespace Portaler
         {
             try
             {
-                var o = new Orig();
+                var o = new Orig { Emission = tw.m_colorTargetfound };
                 foreach (var r in tw.GetComponentsInChildren<ParticleSystemRenderer>(true))
                 {
                     var mat = r.sharedMaterial;
                     if (mat == null || mat.shader == null || mat.shader.name.IndexOf("Gradient", System.StringComparison.OrdinalIgnoreCase) < 0) continue;
-                    o.Fire.Add(new KeyValuePair<Renderer, Material>(r, mat));
-                    if (o.RampProperty == null) o.RampProperty = FindRamp(mat.shader);
+                    var ps = r.GetComponent<ParticleSystem>();
+                    if (ps == null) continue;
+                    var cd = ps.customData;
+                    var f = new FireOrig
+                    {
+                        Ps = ps, Start = ps.main.startColor, Life = ps.colorOverLifetime.color, Speed = ps.colorBySpeed.color,
+                        HasCustom1 = cd.enabled && cd.GetMode(ParticleSystemCustomData.Custom1) == ParticleSystemCustomDataMode.Color,
+                        HasCustom2 = cd.enabled && cd.GetMode(ParticleSystemCustomData.Custom2) == ParticleSystemCustomDataMode.Color,
+                    };
+                    if (f.HasCustom1) f.Custom1 = cd.GetColor(ParticleSystemCustomData.Custom1);
+                    if (f.HasCustom2) f.Custom2 = cd.GetColor(ParticleSystemCustomData.Custom2);
+                    o.Fire.Add(f);
                 }
                 if (Perf.On) Dump(tw, o);
                 return o;
@@ -147,34 +190,43 @@ namespace Portaler
             }
         }
 
-        /// <summary>The gradient texture of a gradient-mapped shader: a texture property named like "gradient" or "ramp".</summary>
-        private static string FindRamp(Shader sh)
-        {
-            string other = null;
-            for (int i = 0; i < sh.GetPropertyCount(); i++)
-            {
-                if (sh.GetPropertyType(i) != UnityEngine.Rendering.ShaderPropertyType.Texture) continue;
-                string n = sh.GetPropertyName(i);
-                string l = n.ToLowerInvariant();
-                if (l.Contains("grad") || l.Contains("ramp")) return n;
-                if (n != "_MainTex" && other == null) other = n;
-            }
-            return other;
-        }
-
-        /// <summary>Developer log: the fire's material and shader properties (once per portal type).</summary>
+        /// <summary>Developer log: where the fire's colours come from (once per portal type).</summary>
         private static void Dump(TeleportWorld tw, Orig o)
         {
             string type = tw.name.Replace("(Clone)", "");
             if (!Dumped.Add(type)) return;
-            var sb = new System.Text.StringBuilder($"[Perf] Portal fire of {type}: {o.Fire.Count} renderer(s), gradient property = {o.RampProperty ?? "NOT FOUND"}");
-            foreach (var kv in o.Fire)
+            var sb = new System.Text.StringBuilder($"[Perf] Portal fire of {type}: {o.Fire.Count} particle system(s), runes {o.Emission}");
+            foreach (var f in o.Fire)
             {
-                var sh = kv.Value.shader;
-                sb.Append($"\n  {kv.Key.name}: {kv.Value.name} / {sh.name}");
-                for (int i = 0; i < sh.GetPropertyCount(); i++) sb.Append($"\n    {sh.GetPropertyName(i)} ({sh.GetPropertyType(i)})");
+                var ps = f.Ps;
+                sb.Append($"\n  {ps.name}: start {Describe(f.Start)}; life {(ps.colorOverLifetime.enabled ? "on " + Describe(f.Life) : "off")};" +
+                          $" speed {(ps.colorBySpeed.enabled ? "on" : "off")}; custom data {(ps.customData.enabled ? "on" : "off")}" +
+                          $"{(f.HasCustom1 ? " c1 " + Describe(f.Custom1) : "")}{(f.HasCustom2 ? " c2 " + Describe(f.Custom2) : "")}");
+                var r = ps.GetComponent<ParticleSystemRenderer>();
+                var m = r != null ? r.sharedMaterial : null;
+                if (m != null && m.HasProperty("_GradientChannel")) sb.Append($"; channel {m.GetFloat("_GradientChannel")}, asAlpha {m.GetFloat("_GradientAsAlpha")}");
             }
             Plugin.Log.LogInfo(sb.ToString());
+        }
+
+        private static string Describe(ParticleSystem.MinMaxGradient g)
+        {
+            switch (g.mode)
+            {
+                case ParticleSystemGradientMode.Color: return "color " + g.color;
+                case ParticleSystemGradientMode.TwoColors: return $"two {g.colorMin}..{g.colorMax}";
+                case ParticleSystemGradientMode.Gradient: return "gradient " + Keys(g.gradient);
+                case ParticleSystemGradientMode.TwoGradients: return $"two gradients {Keys(g.gradientMin)} / {Keys(g.gradientMax)}";
+                default: return g.mode + " " + Keys(g.gradient);
+            }
+        }
+
+        private static string Keys(Gradient g)
+        {
+            if (g == null) return "-";
+            var sb = new System.Text.StringBuilder("[");
+            foreach (var k in g.colorKeys) sb.Append($"{k.time:0.00}:{k.color.r:0.00},{k.color.g:0.00},{k.color.b:0.00} ");
+            return sb.Append("]").ToString();
         }
 
         // ---------- floating destination names ----------
