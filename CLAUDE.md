@@ -5,7 +5,7 @@ The same DLL runs on the dedicated server and on every client.
 
 ## Project layout
 - `src/` – C# source (net48, BepInEx 5, HarmonyX). Plugin id `nfp007.Portaler`.
-- `art/` – images embedded in the DLL (`cat_*.png`, `pin_*.png`) plus `icon.png` (mod icon, gold "P" in a fiery ring).
+- `art/` – images embedded in the DLL (`cat_*.png`, `pin_*.png`) plus `icon.png` (mod icon 256 px: Viking with a sword walking out of a fiery rune portal, "PORTALER" sign; 512 px copy in `docs/icon.png`).
   `tools/make_art.py` regenerates `cat_*` and `pin_*` from `art/pin64.png` (run it after changing icons).
 - `package/Portaler/` – Thunderstore layout: `manifest.json`, `README.md`, `CHANGELOG.md`, `icon.png`, `plugins/Portaler.dll`.
 - `docs/` – screenshots used by the README (linked via `raw.githubusercontent.com/nfp007/portaler/main/docs/...`).
@@ -18,7 +18,7 @@ The same DLL runs on the dedicated server and on every client.
   never uploaded). Normal builds: `[Debug] PerfLog = true`. Measurements, findings and open optimisation ideas: `docs/PERFORMANCE.md`.
 
 ## Current phase
-- 2.0.0 published (one-way links, portal colours, right-click menu). Further work: normal builds again unless the user asks for developer builds.
+- 2.0.1: new icon. 2.0.0 published (one-way links, portal colours, right-click menu). Further work: normal builds again unless the user asks for developer builds.
 
 ## Versioning and release (every change)
 1. Bump the version in **three** places: `src/Plugin.cs` (`Version`), `Portaler.csproj` (`<Version>`), `package/Portaler/manifest.json` (`version_number`).

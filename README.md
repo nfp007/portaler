@@ -1,5 +1,7 @@
 # Portaler
 
+<p align="center"><img src="https://raw.githubusercontent.com/nfp007/portaler/main/docs/icon.png" alt="Portaler icon: a Viking walking out of a fiery rune portal" width="256"></p>
+
 **The best portal mod for Valheim!!!** Every portal connects to every portal, with one-way links, coloured portals, a live map preview, shared favorites, categories, search, your friends' last trips and much more.
 
 Step into any portal and the map opens with a list of all portals on the server. Pick a name or click a pin and you're there. There's no pairing and no tag matching, and by default no item restrictions.

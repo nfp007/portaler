@@ -1,5 +1,9 @@
 # Changelog
 
+## 2.0.1
+- New mod icon: a Viking with a sword walking out of a fiery rune portal.
+- No gameplay changes; the server does not need to be updated.
+
 ## 2.0.0
 **One-way links**
 - Link a portal to one destination: walk into it and you travel straight there, without the list, like the game's own portal pairs. Perfect for a direct road between two bases.
