@@ -19,6 +19,7 @@ Built for servers that play together:
 - **Search, sorting** (biome, name, distance), foldable groups and blocks you can drag into your own order.
 - **Quick arrival**: you arrive as soon as the target area is loaded, often in half the game's usual time.
 - **Automatic names** by biome (`BF-007`, `MO-012`) and renaming any portal right from the list.
+- **Gamepad support**: the list and all its windows work with a controller (Steam Deck too).
 
 Everybody has the same rights: anyone can rename, set categories or change shared favorites. Everything shared is synced through the server and kept with the world save, so it survives restarts and mod updates.
 
