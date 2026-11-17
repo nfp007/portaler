@@ -20,6 +20,7 @@ The same DLL runs on the dedicated server and on every client.
   never uploaded). Normal builds: `[Debug] PerfLog = true`. Measurements, findings and open optimisation ideas: `docs/PERFORMANCE.md`.
 
 ## Current phase
+- 2.0.3 in development: 2.0.3.1-dev distance on every row, 2.0.3.2-dev gamepad (`PortalPad.cs`, `PortalUI.Pad.cs`; windows get fake mouse clicks from the pad).
 - 2.0.2 released (gold picture font above portals, colour picker). 2.0.1: new icon. 2.0.0 published (one-way links, portal colours, right-click menu). Further work: normal builds again unless the user asks for developer builds.
 
 ## Versioning and release (every change)
