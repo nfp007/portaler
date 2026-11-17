@@ -90,7 +90,7 @@ namespace Portaler
             try
             {
                 bool vanilla = !PortalColors.Has(color);
-                Color c = vanilla ? Color.white : PortalColors.Values[color];
+                Color c = vanilla ? Color.white : PortalColors.Get(color);
 
                 // runes: the frame's glow (keep the strength of the original, emission colours go above 1)
                 if (vanilla) tw.m_colorTargetfound = o.Emission;
@@ -288,14 +288,14 @@ namespace Portaler
                 if (d > maxD) continue;
                 var dest = PortalClient.LinkOf(p);
                 if (dest == null) continue;
-                Vector3 sp = cam.WorldToScreenPoint(p.Position + Vector3.up * 4.3f);
+                Vector3 sp = cam.WorldToScreenPoint(p.Position + Vector3.up * 3.6f);
                 if (sp.z <= 0f) continue;
                 EnsureStyle();
 
                 float t = Mathf.Clamp01(d / maxD);
                 int size = Mathf.RoundToInt(Mathf.Lerp(26f, 15f, t));
                 float alpha = Mathf.Clamp01((maxD - d) / (maxD * 0.25f)); // fade out over the last quarter
-                Color tint = PortalColors.Has(p.Color) ? PortalColors.Values[p.Color] : new Color(1f, 0.75f, 0.3f);
+                Color tint = PortalColors.Has(p.Color) ? PortalColors.Get(p.Color) : new Color(1f, 0.75f, 0.3f);
                 string pic = Plugin.FloatingNamePictureFont.Value ? PortalFont.Prepare(dest.DisplayName) : null;
                 if (pic != null)
                 {
@@ -379,7 +379,7 @@ namespace Portaler
             var size = pin.m_uiElement.rect.size;
             float s = Mathf.Max(size.x, size.y) * 1.32f;
             if (s > 0f && Mathf.Abs(ring.rectTransform.sizeDelta.x - s) > 0.5f) ring.rectTransform.sizeDelta = new Vector2(s, s);
-            Color c = PortalColors.Values[color];
+            Color c = PortalColors.Get(color);
             if (ring.color != c) ring.color = c;
             if (!ring.enabled) ring.enabled = true;
         }

@@ -753,7 +753,7 @@ namespace Portaler
             if (PortalColors.Has(p.Color))
             {
                 // colour mark on the left edge of the row
-                var keep = GUI.color; var c = PortalColors.Values[p.Color];
+                var keep = GUI.color; var c = PortalColors.Get(p.Color);
                 GUI.color = new Color(c.r, c.g, c.b, keep.a);
                 GUI.DrawTexture(new Rect(r.x + 3f, r.y + 6f, 4f, r.height - 12f), Texture2D.whiteTexture);
                 GUI.color = keep;
@@ -770,7 +770,7 @@ namespace Portaler
                 if (ax + 40f < maxX)
                 {
                     var keep = GUI.color;
-                    var c = PortalColors.Has(p.Color) ? PortalColors.Values[p.Color] : (Color)new Color32(255, 214, 140, 255);
+                    var c = PortalColors.Has(p.Color) ? PortalColors.Get(p.Color) : (Color)new Color32(255, 214, 140, 255);
                     GUI.color = new Color(c.r, c.g, c.b, keep.a);
                     GUI.DrawTexture(new Rect(ax, r.y + (r.height - 14f) / 2f, 14f, 14f), _arrowLink);
                     GUI.color = keep;
@@ -976,6 +976,7 @@ namespace Portaler
             if (p == null) return;
             CloseWindows();
             _colorFor = p;
+            InitPicker(p);
         }
 
         /// <summary>Right click on a row or a map pin. pos = screen position (GUI coordinates, y down).</summary>
@@ -1210,7 +1211,7 @@ namespace Portaler
             }
             if (PortalColors.Has(color))
             {
-                GUI.color = PortalColors.Values[color];
+                GUI.color = PortalColors.Get(color);
                 GUI.DrawTexture(r, _disc);
             }
             else
@@ -1228,7 +1229,9 @@ namespace Portaler
 
         // ----- colour window -----
 
-        private static Rect ColorRect() => Centered(480f, 62f + 3f * (74f + 8f) + 10f);
+        private const float PickTop = 62f + 3f * (74f + 8f) + 8f;   // top of the custom picker inside the window
+        private const float PickSize = 150f;
+        private static Rect ColorRect() => Centered(480f, PickTop + 26f + PickSize + 18f);
 
         private static Rect ColorTile(Rect cr, int i)
         {
@@ -1236,19 +1239,81 @@ namespace Portaler
             return new Rect(cr.x + 12f + (i % 3) * (tw + 8f), cr.y + 62f + (i / 3) * (74f + 8f), tw, 74f);
         }
 
+        // custom colour picker: saturation/brightness square + hue bar
+        private static float _pickH = 0.08f, _pickS = 0.8f, _pickV = 1f;
+        private static int _pickDrag;            // 0 none, 1 square, 2 hue bar
+        private static Texture2D _hueTex, _svTex;
+        private static float _svTexHue = -1f;
+
+        private static Rect SvRect(Rect cr) => new Rect(cr.x + 16f, cr.y + PickTop + 26f, PickSize, PickSize);
+        private static Rect HueRect(Rect cr) => new Rect(cr.x + 16f + PickSize + 12f, cr.y + PickTop + 26f, 24f, PickSize);
+        private static Rect PreviewRect(Rect cr) => new Rect(cr.x + 16f + PickSize + 52f, cr.y + PickTop + 26f, 70f, 70f);
+        private static Rect UseRect(Rect cr) => new Rect(cr.x + 16f + PickSize + 52f, cr.y + PickTop + 26f + PickSize - 40f, cr.xMax - 16f - (cr.x + 16f + PickSize + 52f), 40f);
+        private static Color PickColor => Color.HSVToRGB(_pickH, _pickS, _pickV);
+
+        /// <summary>Called when the colour window opens: start the picker at the portal's current colour.</summary>
+        private static void InitPicker(PortalInfo p)
+        {
+            _pickDrag = 0;
+            if (p != null && PortalColors.Has(p.Color)) Color.RGBToHSV(PortalColors.Get(p.Color), out _pickH, out _pickS, out _pickV);
+            else { _pickH = 0.08f; _pickS = 0.8f; _pickV = 1f; }
+        }
+
+        private static void PickAt(Rect cr, Vector2 mp)
+        {
+            if (_pickDrag == 1)
+            {
+                var r = SvRect(cr);
+                _pickS = Mathf.Clamp01((mp.x - r.x) / r.width);
+                _pickV = Mathf.Clamp01(1f - (mp.y - r.y) / r.height);
+            }
+            else if (_pickDrag == 2)
+            {
+                var r = HueRect(cr);
+                _pickH = Mathf.Clamp01((mp.y - r.y) / r.height) * 0.999f;
+            }
+        }
+
         private static void ColorInput(Event ev)
         {
             var cr = ColorRect();
             if (ev.type == EventType.KeyDown && (ev.keyCode == KeyCode.Escape || ev.keyCode == Plugin.ColorKey.Value)) { _colorFor = null; ev.Use(); return; }
+            if (ev.type == EventType.KeyDown && (ev.keyCode == KeyCode.Return || ev.keyCode == KeyCode.KeypadEnter))
+            { PortalClient.SetColor(_colorFor, PortalColors.FromColor(PickColor)); _colorFor = null; ev.Use(); return; }
+            var mp = ev.mousePosition;
             if (ev.type == EventType.MouseDown)
             {
-                for (int i = 0; i < PortalColors.Count; i++)
-                    if (ColorTile(cr, i).Contains(ev.mousePosition)) { PortalClient.SetColor(_colorFor, i); break; }
-                _colorFor = null; // a choice or a click outside closes it
                 ev.Use();
+                if (SvRect(cr).Contains(mp)) { _pickDrag = 1; PickAt(cr, mp); return; }
+                if (HueRect(cr).Contains(mp)) { _pickDrag = 2; PickAt(cr, mp); return; }
+                if (UseRect(cr).Contains(mp)) { PortalClient.SetColor(_colorFor, PortalColors.FromColor(PickColor)); _colorFor = null; return; }
+                for (int i = 0; i < PortalColors.Count; i++)
+                    if (ColorTile(cr, i).Contains(mp)) { PortalClient.SetColor(_colorFor, i); _colorFor = null; return; }
+                if (!cr.Contains(mp)) _colorFor = null; // a click outside closes it
                 return;
             }
+            if (ev.type == EventType.MouseDrag && _pickDrag != 0) { PickAt(cr, mp); ev.Use(); return; }
+            if (ev.rawType == EventType.MouseUp) _pickDrag = 0;
             if (ev.isMouse || ev.type == EventType.ScrollWheel) ev.Use();
+        }
+
+        private static void EnsurePickerTextures()
+        {
+            if (_hueTex == null)
+            {
+                _hueTex = new Texture2D(1, 128, TextureFormat.RGBA32, false) { wrapMode = TextureWrapMode.Clamp, filterMode = FilterMode.Bilinear };
+                for (int y = 0; y < 128; y++) _hueTex.SetPixel(0, 127 - y, Color.HSVToRGB(y / 127f * 0.999f, 1f, 1f)); // texture rows go bottom-up
+                _hueTex.Apply();
+            }
+            if (_svTex == null) _svTex = new Texture2D(32, 32, TextureFormat.RGBA32, false) { wrapMode = TextureWrapMode.Clamp, filterMode = FilterMode.Bilinear };
+            if (!Mathf.Approximately(_svTexHue, _pickH))
+            {
+                _svTexHue = _pickH;
+                for (int y = 0; y < 32; y++)
+                    for (int x = 0; x < 32; x++)
+                        _svTex.SetPixel(x, y, Color.HSVToRGB(_pickH, x / 31f, y / 31f));
+                _svTex.Apply();
+            }
         }
 
         private static void DrawColor(Event ev)
@@ -1265,6 +1330,40 @@ namespace Portaler
                 DrawSwatch(new Rect(t.center.x - 15f, t.y + 10f, 30f, 30f), i, false, false);
                 _sortText.Draw(new Rect(t.x, t.y + 44f, t.width, 26f), Tmp(PortalColors.Names[i]), false, false, false, false);
             }
+
+            // custom colour
+            EnsurePickerTextures();
+            _placeholder.Draw(new Rect(cr.x + 16f, cr.y + PickTop, cr.width - 32f, 22f), Tmp("Or pick your own colour:"), false, false, false, false);
+            var sv = SvRect(cr); var hue = HueRect(cr);
+            var old = GUI.color;
+            GUI.color = new Color32(30, 20, 14, 255);
+            GUI.DrawTexture(new Rect(sv.x - 2f, sv.y - 2f, sv.width + 4f, sv.height + 4f), Texture2D.whiteTexture);
+            GUI.DrawTexture(new Rect(hue.x - 2f, hue.y - 2f, hue.width + 4f, hue.height + 4f), Texture2D.whiteTexture);
+            GUI.color = Color.white;
+            GUI.DrawTexture(sv, _svTex);
+            GUI.DrawTexture(hue, _hueTex);
+            // markers
+            var m = new Vector2(sv.x + _pickS * sv.width, sv.y + (1f - _pickV) * sv.height);
+            GUI.color = _pickV > 0.5f ? Color.black : Color.white;
+            GUI.DrawTexture(new Rect(m.x - 7f, m.y - 7f, 14f, 14f), Art.RingSprite().texture);
+            GUI.color = Color.white;
+            float hy = hue.y + _pickH / 0.999f * hue.height;
+            GUI.DrawTexture(new Rect(hue.x - 4f, hy - 1.5f, hue.width + 8f, 3f), Texture2D.whiteTexture);
+            GUI.color = Color.black;
+            GUI.DrawTexture(new Rect(hue.x - 4f, hy - 2.5f, hue.width + 8f, 1f), Texture2D.whiteTexture);
+            GUI.DrawTexture(new Rect(hue.x - 4f, hy + 1.5f, hue.width + 8f, 1f), Texture2D.whiteTexture);
+            // preview + use button
+            var pv = PreviewRect(cr);
+            GUI.color = new Color32(30, 20, 14, 255);
+            GUI.DrawTexture(new Rect(pv.x - 2f, pv.y - 2f, pv.width + 4f, pv.height + 4f), _disc);
+            GUI.color = PickColor;
+            GUI.DrawTexture(pv, _disc);
+            GUI.color = old;
+            bool custom = PortalColors.IsCustom(_colorFor.Color);
+            _placeholder.Draw(new Rect(pv.xMax + 10f, pv.y + 8f, cr.xMax - pv.xMax - 26f, 22f), Tmp(custom ? "Current: custom" : "Current: " + PortalColors.Name(_colorFor.Color)), false, false, false, false);
+            var use = UseRect(cr);
+            DrawBoard(use, use.Contains(ev.mousePosition) ? "sort-hover" : "sort-on", 20);
+            _sortText.Draw(use, Tmp("Use this colour"), false, false, false, false);
         }
 
         // ---------- category filter ----------

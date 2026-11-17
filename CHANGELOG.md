@@ -1,5 +1,10 @@
 # Changelog
 
+## 2.0.3
+- **Colour picker**: below the 8 ready colours, the colour window now has a picker (saturation/brightness square and hue bar) for any colour you like; **Use this colour** or Enter applies it. Hue and saturation colour the fire and runes, brightness mostly shows on the map ring, the list mark and the swirl.
+- The names above linked portals sit lower, closer to the portal.
+- **The server must be updated too** (it now stores custom colours). Clients still on an older version show custom colours as vanilla.
+
 ## 2.0.2
 - The names floating above linked portals are now written in gold Viking letters, in the style of the Portaler sign. Lowercase is shown in capitals and accents are dropped (Č → C); names with other characters keep the normal font.
 - New setting `[World] FloatingNamePictureFont` (on by default) to switch back to the normal font.

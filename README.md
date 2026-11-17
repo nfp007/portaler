@@ -10,7 +10,7 @@ Rest the mouse on a name and the map shows where it goes, with a fiery line from
 
 Built for servers that play together:
 - **One-way links**: link a portal straight to one destination, like vanilla pairs, with its name floating above it.
-- **Portal colours**: runes and fire in 8 colours, shown on the map and in the list too.
+- **Portal colours**: runes and fire in 8 ready colours or any colour from the picker, shown on the map and in the list too.
 - **Favorites**, personal (silver) or shared with everyone (gold), in your own order.
 - **Categories** with icons on the list and the map pins (base, mine, farm, trader, boss, danger, dungeon, explore), plus a one-click filter.
 - **Players' last trips**: see where your friends went and follow them with one click.
@@ -130,7 +130,7 @@ Every feature says what is **🌐 shared** (the same for everybody on the server
 - Looking at a portal in the world: **L** links it (the map opens to pick the destination), or removes its link (press L twice).
 - Linked portals show the destination's name floating above them (within 20 m), and "Leads to: …" in their hover text. In the list: "Mine → BASE Plains".
 - From any other portal you can still travel *to* a linked portal as usual. If a destination is destroyed, the link is dropped.
-- **Colours**: any portal can glow in one of 8 colours (Ice, Green, Gold, Red, Purple, Teal, White, Pink) or keep the vanilla look. Press **C** (on a name, a pin, or a portal in the world) or right click → Colour. The colour shows on the portal's runes, in the fire around it and as a darker shade in the swirl in the middle, as a ring around its map pin and as a mark on its row.
+- **Colours**: any portal can glow in one of 8 colours (Ice, Green, Gold, Red, Purple, Teal, White, Pink), in any colour of your own from the picker (drag in the square and the hue bar, then **Use this colour** or Enter), or keep the vanilla look. Press **C** (on a name, a pin, or a portal in the world) or right click → Colour. The colour shows on the portal's runes, in the fire around it and as a darker shade in the swirl in the middle, as a ring around its map pin and as a mark on its row.
 - Portals with the same name never link each other.
 - 🌐 Shared: links and colours (anyone can change them).
 

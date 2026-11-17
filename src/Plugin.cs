@@ -15,7 +15,7 @@ namespace Portaler
     {
         public const string Guid = "nfp007.Portaler";
         public const string Name = "Portaler";
-        public const string Version = "2.0.2";
+        public const string Version = "2.0.3";
 
         internal static Plugin Instance;
         internal static ManualLogSource Log;

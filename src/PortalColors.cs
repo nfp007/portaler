@@ -20,7 +20,25 @@ namespace Portaler
         };
         public const int Count = 9;
 
-        public static int Clamp(int c) => c < 0 || c >= Count ? 0 : c;
-        public static bool Has(int c) => c > 0 && c < Count;
+        /// <summary>Custom colours from the picker are stored as 0x01RRGGBB (presets stay 0..8).</summary>
+        private const int CustomFlag = 0x01000000;
+        public static bool IsCustom(int c) => (c & 0x7F000000) == CustomFlag;
+        public static int Clamp(int c) => IsCustom(c) ? c : c < 0 || c >= Count ? 0 : c;
+        public static bool Has(int c) => IsCustom(c) || (c > 0 && c < Count);
+
+        /// <summary>The colour for a stored number (preset or custom); clear for vanilla.</summary>
+        public static Color Get(int c)
+        {
+            if (IsCustom(c)) return new Color32((byte)(c >> 16), (byte)(c >> 8), (byte)c, 255);
+            return c > 0 && c < Count ? Values[c] : Color.clear;
+        }
+
+        public static int FromColor(Color c)
+        {
+            Color32 k = c;
+            return CustomFlag | (k.r << 16) | (k.g << 8) | k.b;
+        }
+
+        public static string Name(int c) => IsCustom(c) ? "Custom" : Names[Clamp(c)];
     }
 }
