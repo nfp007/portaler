@@ -7,6 +7,8 @@ The same DLL runs on the dedicated server and on every client.
 - `src/` – C# source (net48, BepInEx 5, HarmonyX). Plugin id `nfp007.Portaler`.
 - `art/` – images embedded in the DLL (`cat_*.png`, `pin_*.png`) plus `icon.png` (mod icon 256 px: Viking with a sword walking out of a fiery rune portal, "PORTALER" sign; 512 px copy in `docs/icon.png`).
   `tools/make_art.py` regenerates `cat_*` and `pin_*` from `art/pin64.png` (run it after changing icons).
+  `art/font/glyph_*.png` – picture font (gold Viking letters A–Z, 0–9, `- . _ , : ! ? ' ( ) + / # &`) for the names above linked portals,
+  drawn by `src/PortalFont.cs`; regenerate with `tools/make_font.py` (metrics are constants in `PortalFont.cs`).
 - `package/Portaler/` – Thunderstore layout: `manifest.json`, `README.md`, `CHANGELOG.md`, `icon.png`, `plugins/Portaler.dll`.
 - `docs/` – screenshots used by the README (linked via `raw.githubusercontent.com/nfp007/portaler/main/docs/...`).
 - `lib/` – game + BepInEx DLLs for building. **Never commit** (copyrighted; in `.gitignore`).
@@ -18,9 +20,13 @@ The same DLL runs on the dedicated server and on every client.
   never uploaded). Normal builds: `[Debug] PerfLog = true`. Measurements, findings and open optimisation ideas: `docs/PERFORMANCE.md`.
 
 ## Current phase
-- 2.0.1: new icon. 2.0.0 published (one-way links, portal colours, right-click menu). Further work: normal builds again unless the user asks for developer builds.
+- 2.0.2 released (gold picture font above portals, colour picker). 2.0.1: new icon. 2.0.0 published (one-way links, portal colours, right-click menu). Further work: normal builds again unless the user asks for developer builds.
 
 ## Versioning and release (every change)
+- **Dev vs release numbering**: work towards the next release `X.Y.Z` is built as dev versions `X.Y.Z.1-dev`, `X.Y.Z.2-dev`, …
+  (`Plugin.Version` / `<Version>` = `X.Y.Z.n`, zip `Portaler-X.Y.Z.n-dev.zip`, manifest `version_number` stays `X.Y.Z`
+  because Thunderstore/Gale need three parts; dev zips are never uploaded). The release is then plain `X.Y.Z`.
+  Do not burn a new release number for each dev build.
 1. Bump the version in **three** places: `src/Plugin.cs` (`Version`), `Portaler.csproj` (`<Version>`), `package/Portaler/manifest.json` (`version_number`).
 2. Add a `CHANGELOG.md` entry at the top (copy to `package/Portaler/CHANGELOG.md`). Keep `README.md` and `package/Portaler/README.md` identical.
 3. **One zip** per version: `Portaler-<ver>.zip` = contents of `package/Portaler/` (not the folder), manifest **without** `author`
