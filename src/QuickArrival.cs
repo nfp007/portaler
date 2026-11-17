@@ -13,8 +13,8 @@ namespace Portaler
     ///    (the same checks the game makes at 8 s, only without the fixed minimum).
     /// Everything else stays vanilla: while the area is not ready nothing changes, and the game's own
     /// 15 s fallback still applies. Vanilla portals, dungeons and other mods' teleports are not touched.
-    /// Switched off automatically when Fast Teleport or QuickTeleport (TeleportEverything) is installed
-    /// (they change the timing of every teleport themselves).
+    /// Switched off automatically when Fast Teleport is installed (it changes the timing of every teleport).
+    /// With QuickTeleport (TeleportEverything) it stays on for Portaler trips.
     /// </summary>
     public static class QuickArrival
     {
@@ -43,13 +43,17 @@ namespace Portaler
                 foreach (var kv in BepInEx.Bootstrap.Chainloader.PluginInfos)
                 {
                     string id = kv.Key ?? "", name = kv.Value?.Metadata?.Name ?? "";
-                    // other mods that change the teleport timing (Fast Teleport; QuickTeleport, part of TeleportEverything)
-                    if (Has(id, "FastTeleport") || Has(name, "Fast Teleport") || Has(name, "FastTeleport") ||
-                        Has(id, "QuickTeleport") || Has(name, "QuickTeleport") || Has(name, "Quick Teleport"))
+                    // Fast Teleport changes the timing of every teleport: leave it to that mod
+                    if (Has(id, "FastTeleport") || Has(name, "Fast Teleport") || Has(name, "FastTeleport"))
                     {
                         _otherMod = true;
-                        Plugin.Log.LogInfo($"{name} is installed: Portaler's QuickArrival stays off, {name} sets the teleport timing.");
+                        Plugin.Log.LogInfo($"{name} is installed: Portaler's QuickArrival stays off.");
                     }
+                    // QuickTeleport (part of TeleportEverything): Portaler keeps its own quick arrival for Portaler trips
+                    // (it only ever shortens the wait and never lands you before the area is ready);
+                    // set [Travel] QuickArrival = false to let QuickTeleport time these trips too
+                    if (Has(id, "QuickTeleport") || Has(name, "QuickTeleport") || Has(name, "Quick Teleport"))
+                        Plugin.Log.LogInfo($"{name} is installed: Portaler trips still use Portaler's QuickArrival (set [Travel] QuickArrival = false to leave them to {name}).");
                     // TeleportEverything / TeleportCreatures / TeleportCarts take tames and carts along on Player.TeleportTo,
                     // which every Portaler trip uses: nothing to do, just say so in the log
                     if (Has(id, "TeleportEverything") || Has(name, "TeleportEverything") || Has(name, "Teleport Everything") ||
