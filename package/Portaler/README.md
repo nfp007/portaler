@@ -17,7 +17,7 @@ Built for servers that play together:
 - **Back to**: your last 1-3 departure portals, one click away.
 - **Last built**: the newest portals on the server.
 - **Search, sorting** (biome, name, distance), foldable groups and blocks you can drag into your own order.
-- **Quick arrival**: you arrive as soon as the target area is loaded, often in half the game's usual time.
+- **Fast**: trips take about 4-6 s instead of the game's 9-10 s (you arrive as soon as the target area is loaded), the map opens without a freeze, and the list uses under 2 ms per frame.
 - **Automatic names** by biome (`BF-007`, `MO-012`) and renaming any portal right from the list.
 - **Gamepad support**: the list and all its windows work with a controller (Steam Deck too).
 
