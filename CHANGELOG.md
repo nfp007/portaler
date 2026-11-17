@@ -1,5 +1,11 @@
 # Changelog
 
+## 2.0.5
+- **Works with TeleportEverything**: install [TeleportEverything](https://thunderstore.io/c/valheim/p/OdinPlus/TeleportEverything/) next to Portaler and your tames and carts travel with you on Portaler trips (list, map pin and linked portals). Portaler does not need it.
+- Quick arrival switches itself off when QuickTeleport (part of TeleportEverything) is installed, as it already did for Fast Teleport, so the two never fight over the teleport timing.
+- The BepInEx log says when TeleportEverything or a teleport-timing mod is found.
+- Only the client changes; the server does not need to be updated.
+
 ## 2.0.4
 - Updated mod description: gamepad support, favorites shared with friends and the faster trips are now mentioned at the top.
 - No gameplay changes; the server does not need to be updated.

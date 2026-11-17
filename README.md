@@ -139,7 +139,7 @@ Every feature says what is **🌐 shared** (the same for everybody on the server
 - The game's own teleport always waits 2 seconds before it moves you and at least 8 seconds in total, even when the target area is already loaded.
 - Trips through Portaler skip those fixed waits: you are moved as soon as the screen is dark, and you arrive as soon as the target area is loaded and there is ground under you.
 - Measured: trips that took 8.6-10.5 s now take 4-6 s. Areas that load slowly still take as long as they need: you never arrive before the area is ready, and the game's own safety (15 s) still applies.
-- Only Portaler trips are affected; vanilla portals and dungeon entrances stay as they are. If [Fast Teleport](https://www.nexusmods.com/valheim/mods/1774) is installed, Portaler leaves the timing to it.
+- Only Portaler trips are affected; vanilla portals and dungeon entrances stay as they are. If [Fast Teleport](https://www.nexusmods.com/valheim/mods/1774) or QuickTeleport (part of TeleportEverything) is installed, Portaler leaves the timing to it.
 - 👤 Personal: on by default, `[Travel] QuickArrival` in your config.
 
 **14. Optional vanilla restrictions**
@@ -152,6 +152,12 @@ Every feature says what is **🌐 shared** (the same for everybody on the server
 - Every Portaler window (menu, colour, category, link, players) works with the D-pad and **A** / **B**. See Controls for all buttons.
 - The search box and the **Show:** category filter still need a mouse or keyboard.
 - 👤 Personal: setting `[Controls] Gamepad` (on by default).
+
+**16. Bring your tames along (with TeleportEverything)**
+- Want your wolves, lox or boars, or your cart, to come with you? Install [TeleportEverything](https://thunderstore.io/c/valheim/p/OdinPlus/TeleportEverything/) next to Portaler.
+- Every Portaler trip (list, map pin or linked portal) goes through the game's own teleport, which is where TeleportEverything takes tames and carts along. Its settings decide what comes with you.
+- Portaler does not need it; without it, nothing changes.
+- 👤 / 🌐 As TeleportEverything sets it up (install it on the server and on every client).
 
 All shared data is stored on the server, next to the world save, and survives restarts and mod updates.
 
@@ -224,7 +230,7 @@ Config file: `BepInEx/config/nfp007.Portaler.cfg` (created on first start). `[Se
 | `[Map] HoverLine` | `true` | Draw the fiery line from your portal to the previewed one. |
 | `[Map] PinSizePreview` | `1.6` | Size of the previewed portal's pin (1 = normal), as long as the fiery line is shown. |
 | `[Map] PinSizeHover` | `1.3` | Size of a portal pin while the mouse is over it on the map. |
-| `[Travel] QuickArrival` | `true` | Trips through Portaler skip the game's fixed waits (2 s before moving, at least 8 s in total) and end as soon as the target area is loaded. Off automatically when Fast Teleport is installed. |
+| `[Travel] QuickArrival` | `true` | Trips through Portaler skip the game's fixed waits (2 s before moving, at least 8 s in total) and end as soon as the target area is loaded. Off automatically when Fast Teleport or QuickTeleport (TeleportEverything) is installed. |
 | `[Debug] PerfLog` | `false` | For troubleshooting: writes Portaler's time and memory use per frame, and the timing of every trip, to the BepInEx log every 10 seconds. |
 | `[Server] VanillaRestrictions` | `false` | `false` = no restrictions, everything travels through every portal. `true` = the game's own rules: no metals/ores through the wooden portal, and the world modifiers "no portals" and "no portals during boss fights" apply. |
 
