@@ -20,7 +20,7 @@ The same DLL runs on the dedicated server and on every client.
   never uploaded). Normal builds: `[Debug] PerfLog = true`. Measurements, findings and open optimisation ideas: `docs/PERFORMANCE.md`.
 
 ## Current phase
-- 2.0.4 released (description only). 2.0.3 released (distance on every row; gamepad support in `PortalPad.cs`, `PortalUI.Pad.cs` - windows get fake mouse clicks from the pad; gamepad not tested in game by the user, he has no controller). 2.0.2 released (gold picture font above portals, colour picker). 2.0.1: new icon. 2.0.0 published (one-way links, portal colours, right-click menu). Further work: normal builds again unless the user asks for developer builds.
+- 2.0.5 in development: 2.0.5.1-dev works with TeleportEverything (QuickArrival off with QuickTeleport; TE 2.9 source checked: it hooks Player.TeleportTo, which Portaler uses; TE 3.x source not public, untested). 2.0.4 released (description only). 2.0.3 released (distance on every row; gamepad support in `PortalPad.cs`, `PortalUI.Pad.cs` - windows get fake mouse clicks from the pad; gamepad not tested in game by the user, he has no controller). 2.0.2 released (gold picture font above portals, colour picker). 2.0.1: new icon. 2.0.0 published (one-way links, portal colours, right-click menu). Further work: normal builds again unless the user asks for developer builds.
 
 ## Versioning and release (every change)
 - **Dev vs release numbering**: work towards the next release `X.Y.Z` is built as dev versions `X.Y.Z.1-dev`, `X.Y.Z.2-dev`, …
