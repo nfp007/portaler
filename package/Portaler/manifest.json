@@ -1,6 +1,6 @@
 {
   "name": "Portaler",
-  "version_number": "2.0.3",
+  "version_number": "2.0.4",
   "website_url": "https://github.com/nfp007/portaler",
   "description": "Best portal mod for Valheim!!! Every portal goes everywhere: live map preview, one-way links, coloured portals, favorites shared with friends, categories, search, gamepad. Quick arrival: about half the vanilla wait. No lag, server synced.",
   "dependencies": [

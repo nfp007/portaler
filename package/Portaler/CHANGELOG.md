@@ -1,5 +1,9 @@
 # Changelog
 
+## 2.0.4
+- Updated mod description: gamepad support, favorites shared with friends and the faster trips are now mentioned at the top.
+- No gameplay changes; the server does not need to be updated.
+
 ## 2.0.3
 - **Gamepad support**: the portal list and all Portaler windows work with a controller. D-pad (or right stick) moves through the list, D-pad left/right jumps between groups, **A** travels, **X** toggles favorite, **Y** opens the portal menu, **LB/RB** change sorting, **B** closes. In windows the D-pad moves between buttons, **A** presses, **B** goes back; in the colour window the right stick and LB/RB pick an own colour. The map previews the chosen portal like a mouse hover. While the list is open, A, X, Y, LB/RB and the D-pad no longer place or change map pins. New setting `[Controls] Gamepad` (on by default). Gamepad support is new: please report anything that does not work as described.
 - **Distance on every row**: the list shows how far each portal is (from the portal you stand in) on every row, not only when sorted by distance. Rows with their own note (Back to, players' trips) keep that note. New setting `[List] DistanceOnEveryRow` (on by default).
