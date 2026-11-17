@@ -15,7 +15,7 @@ namespace Portaler
     {
         public const string Guid = "nfp007.Portaler";
         public const string Name = "Portaler";
-        public const string Version = "2.0.2";
+        public const string Version = "2.0.3.1";
 
         internal static Plugin Instance;
         internal static ManualLogSource Log;
@@ -28,6 +28,7 @@ namespace Portaler
         internal static BepInEx.Configuration.ConfigEntry<bool> FloatingNames;
         internal static BepInEx.Configuration.ConfigEntry<float> FloatingNameDistance;
         internal static BepInEx.Configuration.ConfigEntry<bool> FloatingNamePictureFont;
+        internal static BepInEx.Configuration.ConfigEntry<bool> RowDistance;
         internal static BepInEx.Configuration.ConfigEntry<bool> HoverShowsMap, HoverReturn, HoverLine;
         internal static BepInEx.Configuration.ConfigEntry<bool> PerfLog, QuickArrival;
         internal static BepInEx.Configuration.ConfigEntry<float> HoverDelay, HoverZoomMeters, HoverReturnDelay, PinSizePreview, PinSizeHover, HoverMaxFitMeters, HoverMoveSeconds;
@@ -53,6 +54,7 @@ namespace Portaler
             FloatingNameDistance = Config.Bind("World", "FloatingNameDistance", 20f, "How close (metres) you must be to a linked portal to see its destination's name.");
             FloatingNamePictureFont = Config.Bind("World", "FloatingNamePictureFont", true, "Write the names above portals in the gold Portaler letters (false = the normal game font).");
 
+            RowDistance = Config.Bind("List", "DistanceOnEveryRow", true, "Show the distance next to every portal in the list (false = only when sorted by distance).");
             HoverShowsMap = Config.Bind("Map", "HoverShowsMap", true, "Hovering a name in the list moves the map to that portal.");
             HoverDelay = Config.Bind("Map", "HoverDelay", 0.4f, "Seconds the mouse must rest on a name before the map moves.");
             HoverZoomMeters = Config.Bind("Map", "HoverZoomMeters", 1500f, "For far targets: how much of the world the map shows around the target portal (metres).");

@@ -77,7 +77,7 @@ Every feature says what is **🌐 shared** (the same for everybody on the server
 **6. Sorting & foldable groups**
 - **Biome** (default): grouped by biome, Deep North first. Click again for Meadows first.
 - **Name**: one list A to Z, or Z to A.
-- **Distance**: nearest first (or farthest first), with the distance shown next to each name.
+- **Distance**: nearest first (or farthest first). The distance is shown next to every name in any sorting (setting `DistanceOnEveryRow`).
 - Click a group title to fold or unfold it.
 - Blocks, from the top by default: **Back to**, **Players' last trips**, **Favorites**, **Last built**, **All portals** (the biome groups, or the sorted list). Each has a handle left of its title: drag them into any order, for example put Last built below all portals.
 - 👤 Personal: sort choice (per PC), folded groups and group order (per character).
@@ -190,6 +190,7 @@ Config file: `BepInEx/config/nfp007.Portaler.cfg` (created on first start). `[Se
 | `[World] FloatingNames` | `true` | Show the destination's name above linked portals near you. |
 | `[World] FloatingNameDistance` | `20` | How close (metres) you must be to see it. |
 | `[World] FloatingNamePictureFont` | `true` | Write those names in the gold Portaler letters (`false` = normal game font). |
+| `[List] DistanceOnEveryRow` | `true` | Show the distance on every row (`false` = only when sorted by distance). |
 | `[Map] HoverShowsMap` | `true` | Hovering a name moves the map to that portal. |
 | `[Map] HoverDelay` | `0.4` | Seconds the mouse must rest on a name before the map moves. |
 | `[Map] HoverMaxFitMeters` | `2000` | Portals closer than this (metres) are framed together; farther targets are shown directly. |

@@ -703,7 +703,7 @@ namespace Portaler
                     DrawRowDecor(r, p, handle, false, opt);
                     if (opt?.Tag != null)
                         _distTag.Draw(r, Tmp(opt.Tag), false, false, false, false);
-                    else if (Prefs.SortMode == "Distance")
+                    else if (Prefs.SortMode == "Distance" || Plugin.RowDistance.Value)
                         _distTag.Draw(r, Tmp(DistanceOf(p)), false, false, false, false);
                 }
             }
@@ -766,7 +766,7 @@ namespace Portaler
                 var st = here ? HereStyle(p, slot) : RowStyle(p, slot);
                 float nameW = st.CalcSize(Tmp(Highlight(p.DisplayName))).x;
                 float ax = r.x + nameW + 6f;
-                float maxX = r.xMax - (opt?.Tag != null || Prefs.SortMode == "Distance" ? 110f : 12f);
+                float maxX = r.xMax - (opt?.Tag != null || Prefs.SortMode == "Distance" || Plugin.RowDistance.Value ? 110f : 12f);
                 if (ax + 40f < maxX)
                 {
                     var keep = GUI.color;

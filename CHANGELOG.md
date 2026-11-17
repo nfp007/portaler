@@ -1,5 +1,9 @@
 # Changelog
 
+## 2.0.3
+- **Distance on every row**: the list shows how far each portal is (from the portal you stand in) on every row, not only when sorted by distance. Rows with their own note (Back to, players' trips) keep that note. New setting `[List] DistanceOnEveryRow` (on by default).
+- Only the client changes; the server does not need to be updated.
+
 ## 2.0.2
 - **Gold letters above portals**: the destination's name floating above a linked portal is now written in gold Viking letters, in the style of the Portaler sign, and sits a bit lower, closer to the portal. Lowercase is shown in capitals and accents are dropped (Č → C); names with other characters keep the normal font. New setting `[World] FloatingNamePictureFont` (on by default) switches back to the normal font.
 - **Colour picker**: below the 8 ready colours, the colour window now has a picker (saturation/brightness square and hue bar) for any colour you like; **Use this colour** or Enter applies it. Hue and saturation colour the fire and runes, brightness mostly shows on the map ring, the list mark and the swirl.
