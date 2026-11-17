@@ -146,6 +146,12 @@ Every feature says what is **🌐 shared** (the same for everybody on the server
 - Prefer the game's own rules? Switch on `VanillaRestrictions` on the server (see Configuration).
 - 🌐 Shared: the server decides for everybody.
 
+**15. Gamepad support**
+- Play with a controller (or on Steam Deck): move through the list with the D-pad, **A** travels, **X** sets a favorite, **Y** opens the portal menu, **B** closes. The map previews the portal you are on, just like hovering with the mouse.
+- Every Portaler window (menu, colour, category, link, players) works with the D-pad and **A** / **B**. See Controls for all buttons.
+- The search box and the **Show:** category filter still need a mouse or keyboard.
+- 👤 Personal: setting `[Controls] Gamepad` (on by default).
+
 All shared data is stored on the server, next to the world save, and survives restarts and mod updates.
 
 <details>
@@ -174,6 +180,21 @@ All shared data is stored on the server, next to the world save, and survives re
 | Scroll the list | Mouse wheel over the list |
 | Close | **Close** button, Esc, or walk out of the portal |
 
+**Gamepad** (when you play with a controller; moving the mouse switches back to mouse control):
+
+| Action | Button |
+|---|---|
+| Move in the list | D-pad up / down or right stick (hold to move faster) |
+| Jump to the previous / next group | D-pad left / right |
+| Travel | **A** |
+| Favorite on / off | **X** |
+| Portal menu (link, colour, category, rename…) | **Y** |
+| Change sorting (Biome / Name / Distance) | **LB** / **RB** |
+| Close the list | **B** |
+| In a window (menu, colour, category, link, players) | D-pad chooses, **A** presses, **B** goes back |
+| Own colour in the colour window | Right stick = saturation / brightness, **LB** / **RB** = hue, then **Use this colour** |
+| Pan / zoom the map | Left stick / triggers, as in the game |
+
 </details>
 
 <details>
@@ -187,6 +208,7 @@ Config file: `BepInEx/config/nfp007.Portaler.cfg` (created on first start). `[Se
 | `[Controls] CategoryKey` | `T` | Key to choose the hovered portal's category. |
 | `[Controls] LinkKey` | `L` | Link the portal you stand in to the hovered name or pin; in the world: link or unlink the portal you look at. |
 | `[Controls] ColorKey` | `C` | Choose the colour of the hovered name, pin, or the portal you look at. |
+| `[Controls] Gamepad` | `true` | Use the portal list with a gamepad (see Controls). `false` = the gamepad works on the map as in the vanilla game. |
 | `[World] FloatingNames` | `true` | Show the destination's name above linked portals near you. |
 | `[World] FloatingNameDistance` | `20` | How close (metres) you must be to see it. |
 | `[World] FloatingNamePictureFont` | `true` | Write those names in the gold Portaler letters (`false` = normal game font). |

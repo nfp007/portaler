@@ -10,7 +10,7 @@ namespace Portaler
     /// Left click a name = travel, right click (or click the star) = favorite on/off.
     /// The portal you stand in is greyed out ("you are here") and cannot be chosen.
     /// </summary>
-    public static class PortalUI
+    public static partial class PortalUI
     {
         public static bool MouseOverList { get; private set; }
 
@@ -101,6 +101,9 @@ namespace Portaler
             _playersOpen = false;
             CloseWindows();
             HoveredPortal = null;
+            _padFocus = 0;
+            _padInit = true;
+            _padWin = -1;
         }
 
         public static void Draw()
@@ -125,6 +128,9 @@ namespace Portaler
             float top = 80f;
             _rect = new Rect(16f, top, _width, Mathf.Max(300f, Screen.height - top - 70f));
             var ev = Event.current;
+            PortalInfo travel = null, toggle = null;
+            // gamepad: once per frame, before anything is drawn
+            if (ev.type == EventType.Layout && !TextInput.IsVisible()) PadStep(ref travel, ref toggle);
             MouseOverList = _rect.Contains(ev.mousePosition);
             if (ev.type == EventType.MouseDown && MouseOverList) _pressedInList = true;
             if (ev.rawType == EventType.MouseUp) _pressedInList = false;
@@ -178,7 +184,6 @@ namespace Portaler
             thumbStyle.normal.background = _thumb;
             thumbStyle.border = ThumbBorder;
 
-            PortalInfo travel = null, toggle = null;
             try
             {
                 GUILayout.BeginArea(new Rect(_rect.x + 22, _rect.y + 18, _rect.width - 44, _rect.height - 36));
@@ -204,6 +209,8 @@ namespace Portaler
                 _highlight = m.Search.Length > 0 ? m.Search : null;
                 _forceOpen = filtering;
                 int index = 0;
+                _vis = 0;
+                if (ev.type == EventType.Repaint) { GroupStarts.Clear(); _padPortal = null; }
 
                 if (filtering)
                 {
@@ -217,6 +224,12 @@ namespace Portaler
                     MovableGroups(m, ref index, ref travel, ref toggle);
                 }
                 GUILayout.EndScrollView();
+                if (ev.type == EventType.Repaint)
+                {
+                    _viewH = GUILayoutUtility.GetLastRect().height;
+                    _visCount = _vis;
+                    if (_visCount > 0 && _padFocus >= _visCount) _padFocus = _visCount - 1;
+                }
 
                 GUILayout.Space(8);
                 if (Board(GUILayoutUtility.GetRect(GUIContent.none, _closeText, GUILayout.ExpandWidth(true), GUILayout.Height(RowHeight)),
@@ -232,13 +245,16 @@ namespace Portaler
 
             if (ev.type == EventType.Repaint)
             {
-                HoveredPortal = MouseOverList && _drag == null && _dragGroup == null && !WindowOpen ? _hovered : null;
+                HoveredPortal = WindowOpen || _drag != null || _dragGroup != null ? null
+                              : PortalPad.Active ? _padPortal
+                              : MouseOverList ? _hovered : null;
                 if (_picker != null || _playersOpen || _linkOpen || _colorFor != null) DimScreen();
                 if (_picker != null) DrawPicker(ev);
                 if (_playersOpen) DrawPlayers(ev);
                 if (_menuFor != null) DrawMenu(ev);
                 if (_linkOpen) DrawLink(ev);
                 if (_colorFor != null) DrawColor(ev);
+                if (PortalPad.Active && WindowOpen && _padWin > 0 && _padWinFocus < PadTargets.Count) DrawFocusFrame(PadTargets[_padWinFocus]);
             }
 
             if (toggle != null) PortalClient.ToggleFavorite(toggle);
@@ -351,6 +367,7 @@ namespace Portaler
         /// </summary>
         private static bool GroupHeader(string key, string title, bool movable, float rightW, out Rect h, out Rect right)
         {
+            if (Event.current.type == EventType.Repaint) GroupStarts.Add(_vis);
             bool dragged = _dragGroup == key;
             bool collapsed = dragged || (!_forceOpen && Prefs.IsCollapsed(key));
             var style = movable ? _headerButtonH : _headerButton;
@@ -647,10 +664,14 @@ namespace Portaler
             if (opt != null && opt.Inset > 0f) { r.x += opt.Inset; r.width -= opt.Inset * 2f; }
             var ev = Event.current;
             bool here = p.Id == PortalClient.SourceId;
+            int vis = _vis++;
+            if (_padInit && !here && ev.type == EventType.Repaint) { _padFocus = vis; _padInit = false; _padScroll = true; }
+            bool focus = PortalPad.Active && vis == _padFocus;
+            if (focus && ev.type == EventType.Repaint) PadRow(p, r, vis);
             bool handle = favRow && !_filtering;
             bool slot = handle || opt?.Lead != null;
             if (favRow && ev.type == EventType.Repaint) FavRects.Add(new KeyValuePair<PortalInfo, Rect>(p, r));
-            if (ev.type == EventType.Repaint && r.Contains(ev.mousePosition)) _hovered = p;
+            if (ev.type == EventType.Repaint && !PortalPad.Active && r.Contains(ev.mousePosition)) _hovered = p;
 
             float x = r.x + 8f + (slot ? HandleW : 0f);
             Rect star = new Rect(x, r.y + (r.height - StarSize) / 2f, StarSize, StarSize);
@@ -686,7 +707,7 @@ namespace Portaler
 
             if (here)
             {
-                if (ev.type == EventType.Repaint) DrawRowVisual(r, p, "here", index, handle, opt);
+                if (ev.type == EventType.Repaint) { DrawRowVisual(r, p, "here", index, handle, opt); if (focus) DrawFocusFrame(r); }
                 // swallow left clicks: you cannot travel to the portal you are standing in (but you can pick it for a link)
                 if (ev.type == EventType.MouseDown && ev.button == 0 && r.Contains(ev.mousePosition))
                 {
@@ -697,10 +718,13 @@ namespace Portaler
             else
             {
                 if (opt != null && opt.Glow && ev.type == EventType.Repaint) DrawGlow(r);
+                _boardFocus = focus;
                 if (Board(r, Highlight(p.DisplayName), RowStyle(p, slot), opt?.Kind ?? "row", index)) travel = p;
+                _boardFocus = false;
                 if (ev.type == EventType.Repaint)
                 {
                     DrawRowDecor(r, p, handle, false, opt);
+                    if (focus) DrawFocusFrame(r);
                     if (opt?.Tag != null)
                         _distTag.Draw(r, Tmp(opt.Tag), false, false, false, false);
                     else if (Prefs.SortMode == "Distance" || Plugin.RowDistance.Value)
@@ -872,7 +896,7 @@ namespace Portaler
                 var row = PlayerRow(pr, i);
                 if (row.yMax > done.y - 4f) break;
                 bool on = PortalClient.IsTracked(known[i].Key);
-                bool hover = row.Contains(ev.mousePosition);
+                bool hover = row.Contains(Pointer(ev));
                 DrawBoard(row, hover ? "sort-hover" : "sort", i);
                 // check box
                 var cb = new Rect(row.x + 10f, row.y + (row.height - 22f) / 2f, 22f, 22f);
@@ -896,7 +920,7 @@ namespace Portaler
             }
             if (known.Count == 0)
                 _placeholder.Draw(new Rect(pr.x + 16f, pr.y + 70f, pr.width - 32f, 30f), Tmp("Nobody else has played here yet."), false, false, false, false);
-            DrawBoard(done, done.Contains(ev.mousePosition) ? "close-hover" : "close", 0);
+            DrawBoard(done, done.Contains(Pointer(ev)) ? "close-hover" : "close", 0);
             _closeText.Draw(done, Tmp("Done"), false, false, false, false);
         }
 
@@ -1064,7 +1088,7 @@ namespace Portaler
             for (int i = 0; i < MenuItems.Count; i++)
             {
                 var r = MenuItemRect(mr, i);
-                DrawBoard(r, r.Contains(ev.mousePosition) ? "row-hover" : "row", i);
+                DrawBoard(r, r.Contains(Pointer(ev)) ? "row-hover" : "row", i);
                 var it = MenuItems[i];
                 if (it.Dest != null) DrawLinkLabel(new Rect(r.x, r.y, r.width - 10f, r.height), _menuText, it.Text, it.Dest);
                 else _menuText.Draw(r, Tmp(it.Text), false, false, false, false);
@@ -1137,7 +1161,7 @@ namespace Portaler
         private static void DrawLink(Event ev)
         {
             var lr = LinkRect();
-            var mp = ev.mousePosition;
+            var mp = Pointer(ev);
             DrawBoard(lr, "picker", 0);
             _pickerTitle.Draw(new Rect(lr.x + 22f, lr.y + 12f, lr.width - 44f, 26f), Tmp("Link portal"), false, false, false, false);
             _placeholder.Draw(new Rect(lr.x + 22f, lr.y + 40f, lr.width - 44f, 22f), Tmp("Walking into \"From\" takes you straight to \"To\"."), false, false, false, false);
@@ -1326,14 +1350,14 @@ namespace Portaler
             {
                 var t = ColorTile(cr, i);
                 bool on = _colorFor.Color == i;
-                DrawBoard(t, on ? "sort-on" : t.Contains(ev.mousePosition) ? "sort-hover" : "sort", i);
+                DrawBoard(t, on ? "sort-on" : t.Contains(Pointer(ev)) ? "sort-hover" : "sort", i);
                 DrawSwatch(new Rect(t.center.x - 15f, t.y + 10f, 30f, 30f), i, false, false);
                 _sortText.Draw(new Rect(t.x, t.y + 44f, t.width, 26f), Tmp(PortalColors.Names[i]), false, false, false, false);
             }
 
             // custom colour
             EnsurePickerTextures();
-            _placeholder.Draw(new Rect(cr.x + 16f, cr.y + PickTop, cr.width - 32f, 22f), Tmp("Or pick your own colour:"), false, false, false, false);
+            _placeholder.Draw(new Rect(cr.x + 16f, cr.y + PickTop, cr.width - 32f, 22f), Tmp(PortalPad.Active ? "Or pick your own colour (right stick, LB / RB):" : "Or pick your own colour:"), false, false, false, false);
             var sv = SvRect(cr); var hue = HueRect(cr);
             var old = GUI.color;
             GUI.color = new Color32(30, 20, 14, 255);
@@ -1362,7 +1386,7 @@ namespace Portaler
             bool custom = PortalColors.IsCustom(_colorFor.Color);
             _placeholder.Draw(new Rect(pv.xMax + 10f, pv.y + 8f, cr.xMax - pv.xMax - 26f, 22f), Tmp(custom ? "Current: custom" : "Current: " + PortalColors.Name(_colorFor.Color)), false, false, false, false);
             var use = UseRect(cr);
-            DrawBoard(use, use.Contains(ev.mousePosition) ? "sort-hover" : "sort-on", 20);
+            DrawBoard(use, use.Contains(Pointer(ev)) ? "sort-hover" : "sort-on", 20);
             _sortText.Draw(use, Tmp("Use this colour"), false, false, false, false);
         }
 
@@ -1441,7 +1465,7 @@ namespace Portaler
             {
                 var t = PickerTile(pr, c);
                 bool on = _picker.Category == c;
-                bool hover = t.Contains(ev.mousePosition);
+                bool hover = t.Contains(Pointer(ev));
                 DrawBoard(t, on ? "sort-on" : hover ? "sort-hover" : "sort", c);
                 if (c > 0) GUI.DrawTexture(new Rect(t.center.x - 17f, t.y + 10f, 34f, 34f), _catIcons[c], ScaleMode.ScaleToFit, true);
                 else _pickerX.Draw(new Rect(t.x, t.y + 6f, t.width, 40f), Tmp("x"), false, false, false, false);
@@ -1486,7 +1510,7 @@ namespace Portaler
             var ev = Event.current;
             if (ev.type == EventType.Repaint)
             {
-                bool hover = r.Contains(ev.mousePosition);
+                bool hover = PortalPad.Active ? _boardFocus : r.Contains(ev.mousePosition);
                 DrawBoard(r, hover ? HoverKind(kind) : kind, index);
             }
             return GUI.Button(r, text, textStyle);
@@ -1638,6 +1662,7 @@ namespace Portaler
 
         private static string HintText()
         {
+            if (PortalPad.Active) return PadHint;
             if (_hintText == null || _hintRename != Plugin.RenameKey.Value || _hintCategory != Plugin.CategoryKey.Value || _hintLink != Plugin.LinkKey.Value || _hintColor != Plugin.ColorKey.Value)
             {
                 _hintRename = Plugin.RenameKey.Value; _hintCategory = Plugin.CategoryKey.Value;
