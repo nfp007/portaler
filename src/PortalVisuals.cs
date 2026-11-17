@@ -295,6 +295,24 @@ namespace Portaler
                 float t = Mathf.Clamp01(d / maxD);
                 int size = Mathf.RoundToInt(Mathf.Lerp(26f, 15f, t));
                 float alpha = Mathf.Clamp01((maxD - d) / (maxD * 0.25f)); // fade out over the last quarter
+                Color tint = PortalColors.Has(p.Color) ? PortalColors.Values[p.Color] : new Color(1f, 0.75f, 0.3f);
+                string pic = Plugin.FloatingNamePictureFont.Value ? PortalFont.Prepare(dest.DisplayName) : null;
+                if (pic != null)
+                {
+                    // picture font: capitals 30 px near, 16 px far
+                    float cap = Mathf.Lerp(30f, 16f, t);
+                    float tw = PortalFont.Width(pic, cap);
+                    float aw = cap * 0.9f, ag = cap * 0.3f;
+                    float px = sp.x - (aw + ag + tw) / 2f, capTop = Screen.height - sp.y - cap / 2f;
+                    var keep = GUI.color;
+                    GUI.color = new Color(0f, 0f, 0f, 0.6f * alpha);
+                    GUI.DrawTexture(new Rect(px + 1.5f, capTop + (cap - aw) / 2f + 1.5f, aw, aw), _arrow);
+                    GUI.color = new Color(tint.r, tint.g, tint.b, alpha);
+                    GUI.DrawTexture(new Rect(px, capTop + (cap - aw) / 2f, aw, aw), _arrow);
+                    GUI.color = keep;
+                    PortalFont.Draw(pic, px + aw + ag, capTop, cap, alpha);
+                    continue;
+                }
                 _name.fontSize = size;
                 Content.text = dest.DisplayName;
                 Vector2 ts = _name.CalcSize(Content);
@@ -303,7 +321,6 @@ namespace Portaler
                 float x = sp.x - w / 2f, y = Screen.height - sp.y - ts.y / 2f;
 
                 var old = GUI.color;
-                Color tint = PortalColors.Has(p.Color) ? PortalColors.Values[p.Color] : new Color(1f, 0.75f, 0.3f);
                 GUI.color = new Color(0f, 0f, 0f, 0.6f * alpha);
                 GUI.DrawTexture(new Rect(x + 1.5f, y + (ts.y - arrowW) / 2f + 1.5f, arrowW, arrowW), _arrow);
                 _name.normal.textColor = new Color(0f, 0f, 0f, 0.75f * alpha);

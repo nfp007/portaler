@@ -189,6 +189,7 @@ Config file: `BepInEx/config/nfp007.Portaler.cfg` (created on first start). `[Se
 | `[Controls] ColorKey` | `C` | Choose the colour of the hovered name, pin, or the portal you look at. |
 | `[World] FloatingNames` | `true` | Show the destination's name above linked portals near you. |
 | `[World] FloatingNameDistance` | `20` | How close (metres) you must be to see it. |
+| `[World] FloatingNamePictureFont` | `true` | Write those names in the gold Portaler letters (`false` = normal game font). |
 | `[Map] HoverShowsMap` | `true` | Hovering a name moves the map to that portal. |
 | `[Map] HoverDelay` | `0.4` | Seconds the mouse must rest on a name before the map moves. |
 | `[Map] HoverMaxFitMeters` | `2000` | Portals closer than this (metres) are framed together; farther targets are shown directly. |

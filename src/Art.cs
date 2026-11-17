@@ -16,7 +16,7 @@ namespace Portaler
         private static readonly System.Collections.Generic.Dictionary<int, Sprite> PinSprites = new System.Collections.Generic.Dictionary<int, Sprite>();
         private static readonly System.Collections.Generic.Dictionary<int, Texture2D> CatIcons = new System.Collections.Generic.Dictionary<int, Texture2D>();
 
-        private static Texture2D LoadPng(string resource)
+        internal static Texture2D LoadPng(string resource, bool mipmaps = false)
         {
             try
             {
@@ -25,9 +25,10 @@ namespace Portaler
                     if (s == null) return null;
                     var ms = new MemoryStream();
                     s.CopyTo(ms);
-                    var tex = new Texture2D(2, 2, TextureFormat.RGBA32, false);
+                    var tex = new Texture2D(2, 2, TextureFormat.RGBA32, mipmaps);
                     if (!ImageConversion.LoadImage(tex, ms.ToArray())) return null;
-                    tex.filterMode = FilterMode.Bilinear;
+                    if (mipmaps) tex.Apply(true); // smooth when drawn small
+                    tex.filterMode = mipmaps ? FilterMode.Trilinear : FilterMode.Bilinear;
                     tex.wrapMode = TextureWrapMode.Clamp;
                     return tex;
                 }

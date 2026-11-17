@@ -1,5 +1,10 @@
 # Changelog
 
+## 2.0.2
+- The names floating above linked portals are now written in gold Viking letters, in the style of the Portaler sign. Lowercase is shown in capitals and accents are dropped (Č → C); names with other characters keep the normal font.
+- New setting `[World] FloatingNamePictureFont` (on by default) to switch back to the normal font.
+- Only the client changes; the server does not need to be updated.
+
 ## 2.0.1
 - New mod icon: a Viking with a sword walking out of a fiery rune portal.
 - No gameplay changes; the server does not need to be updated.
