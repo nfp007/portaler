@@ -208,8 +208,7 @@ namespace Portaler
 
         private static string LocalPlayerName => Player.m_localPlayer != null ? Player.m_localPlayer.GetPlayerName() : "";
 
-        /// <summary>Players that can be followed: everybody with a trip, plus everybody online (never yourself). Value = online.</summary>
-        public static List<KeyValuePair<string, bool>> KnownPlayers()
+        private static HashSet<string> OnlineNames()
         {
             var online = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
             try
@@ -219,11 +218,15 @@ namespace Portaler
                         if (!string.IsNullOrEmpty(pi.m_name)) online.Add(pi.m_name);
             }
             catch { }
-            var names = new HashSet<string>(online, StringComparer.OrdinalIgnoreCase);
-            foreach (var t in Trips) if (t.PlayerId != LocalPlayerId && !string.IsNullOrEmpty(t.Name)) names.Add(t.Name);
-            names.Remove(LocalPlayerName);
-            return names.OrderBy(x => x, StringComparer.OrdinalIgnoreCase)
-                        .Select(x => new KeyValuePair<string, bool>(x, online.Contains(x))).ToList();
+            online.Remove(LocalPlayerName);
+            return online;
+        }
+
+        /// <summary>Players that can be followed: the other players online right now (never yourself). Value = online.</summary>
+        public static List<KeyValuePair<string, bool>> KnownPlayers()
+        {
+            return OnlineNames().OrderBy(x => x, StringComparer.OrdinalIgnoreCase)
+                                .Select(x => new KeyValuePair<string, bool>(x, true)).ToList();
         }
 
         public static bool IsTracked(string name)
@@ -232,13 +235,15 @@ namespace Portaler
             return set == null || set.Contains(name);
         }
 
-        /// <summary>Last trips of the players this character follows, newest first.</summary>
+        /// <summary>Last trips of the online players this character follows, newest first.</summary>
         public static List<KeyValuePair<TripInfo, PortalInfo>> TrackedTrips()
         {
             var result = new List<KeyValuePair<TripInfo, PortalInfo>>();
+            var online = OnlineNames();
             foreach (var t in Trips.OrderBy(t => t.AgeSeconds))
             {
                 if (t.PlayerId == LocalPlayerId || string.Equals(t.Name, LocalPlayerName, StringComparison.OrdinalIgnoreCase)) continue;
+                if (!online.Contains(t.Name ?? "")) continue; // only players who are here now
                 if (!IsTracked(t.Name)) continue;
                 var p = Portals.FirstOrDefault(x => x.Id == t.PortalId);
                 if (p != null) result.Add(new KeyValuePair<TripInfo, PortalInfo>(t, p));
@@ -320,19 +325,25 @@ namespace Portaler
 
             public string GetText() => _portal.Name ?? "";
 
-            public void SetText(string text)
-            {
-                text = (text ?? "").Trim();
-                if (text.Length > MaxNameLength) text = text.Substring(0, MaxNameLength);
-                if (text == (_portal.Name ?? "") || ZRoutedRpc.instance == null) return;
-                string author = "";
-                try { author = Splatform.PlatformManager.DistributionPlatform.LocalUser.PlatformUserID.ToString(); }
-                catch { }
-                ZRoutedRpc.instance.InvokeRoutedRPC(PortalServer.RpcRename, _portal.Id, text, author);
-                // show it right away; the server confirms with the next list update
-                foreach (var p in Portals) if (p.Id == _portal.Id) p.Name = text;
-                _pinsDirty = true;
-            }
+            public void SetText(string text) => Rename(_portal, text);
+        }
+
+        /// <summary>Rename a portal for everybody (through the server).</summary>
+        public static void Rename(PortalInfo portal, string text)
+        {
+            if (portal == null) return;
+            text = (text ?? "").Trim();
+            if (text.Length > MaxNameLength) text = text.Substring(0, MaxNameLength);
+            if (text == (portal.Name ?? "") || ZRoutedRpc.instance == null) return;
+            string author = "";
+            try { author = Splatform.PlatformManager.DistributionPlatform.LocalUser.PlatformUserID.ToString(); }
+            catch { }
+            ZRoutedRpc.instance.InvokeRoutedRPC(PortalServer.RpcRename, portal.Id, text, author);
+            // show it right away; the server confirms with the next list update
+            foreach (var p in Portals) if (p.Id == portal.Id) p.Name = text;
+            portal.Name = text;
+            _pinsDirty = true;
+            DataVersion++;
         }
 
         /// <summary>Click cycle: none -> mine -> shared with everyone -> none.</summary>

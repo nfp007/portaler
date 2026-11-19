@@ -46,7 +46,7 @@ namespace Portaler
         public static bool BlocksKeys => SearchFocused || WindowOpen;
 
         /// <summary>A Portaler window (menu, link dialog, colour, category, players) is open over the list.</summary>
-        public static bool WindowOpen => _graveOpen || _picker != null || _playersOpen || _menuFor != null || _linkOpen || _colorFor != null;
+        public static bool WindowOpen => _renameFor != null || _graveOpen || _picker != null || _playersOpen || _menuFor != null || _linkOpen || _colorFor != null;
 
         // category filter (0 = all) and category window
         private static int _catFilter;
@@ -108,6 +108,7 @@ namespace Portaler
 
         public static void Draw()
         {
+            if (!PortalClient.Active && _renameFor != null) { MouseOverList = false; HoveredPortal = null; DrawRenameAlone(); return; }
             if (!PortalClient.Active)
             {
                 MouseOverList = false;
@@ -140,7 +141,8 @@ namespace Portaler
             // Category window: handled before the list so the list never sees these clicks.
             // a press on any Portaler window must not reach the map underneath
             if (WindowOpen && ev.type == EventType.MouseDown) _modalPress = true;
-            if (_graveOpen) GraveInput(ev);
+            if (_renameFor != null) RenameInput(ev);
+            else if (_graveOpen) GraveInput(ev);
             else if (_picker != null) PickerInput(ev);
             else if (_playersOpen) PlayersInput(ev);
             else if (_menuFor != null) MenuInput(ev);
@@ -171,7 +173,7 @@ namespace Portaler
             var keyTarget = MouseOverList ? _hovered : PortalClient.HoveredPin;
             if (!typing && !SearchFocused && !WindowOpen && ev.type == EventType.KeyDown && keyTarget != null)
             {
-                if (ev.keyCode == Plugin.RenameKey.Value) PortalClient.BeginRename(keyTarget); // opened on the next Update
+                if (ev.keyCode == Plugin.RenameKey.Value) { OpenRename(keyTarget); ev.Use(); }
                 else if (ev.keyCode == Plugin.CategoryKey.Value) { _picker = keyTarget; ev.Use(); }
                 else if (ev.keyCode == Plugin.LinkKey.Value) { LinkFromHere(keyTarget); ev.Use(); }
                 else if (ev.keyCode == Plugin.ColorKey.Value) { OpenColorWindow(keyTarget); ev.Use(); }
@@ -260,6 +262,8 @@ namespace Portaler
                 if (_graveOpen) DrawGrave(ev);
                 if (PortalPad.Active && WindowOpen && _padWin > 0 && _padWinFocus < PadTargets.Count) DrawFocusFrame(PadTargets[_padWinFocus]);
             }
+
+            if (_renameFor != null) RenameWindow(ev); // drawn last, on top; the text field needs every event
 
             if (toggle != null) PortalClient.ToggleFavorite(toggle);
             else if (travel != null)
@@ -923,7 +927,7 @@ namespace Portaler
                 GUI.color = old;
             }
             if (known.Count == 0)
-                _placeholder.Draw(new Rect(pr.x + 16f, pr.y + 70f, pr.width - 32f, 30f), Tmp("Nobody else has played here yet."), false, false, false, false);
+                _placeholder.Draw(new Rect(pr.x + 16f, pr.y + 70f, pr.width - 32f, 30f), Tmp("Nobody else is online right now."), false, false, false, false);
             DrawBoard(done, done.Contains(Pointer(ev)) ? "close-hover" : "close", 0);
             _closeText.Draw(done, Tmp("Done"), false, false, false, false);
         }
@@ -956,7 +960,7 @@ namespace Portaler
 
         private static void CloseWindows()
         {
-            _graveOpen = false; _menuFor = null; _linkOpen = false; _linkFrom = null; _linkTo = null; _colorFor = null; _pickEnd = -1; _picker = null; _playersOpen = false;
+            _renameFor = null; _graveOpen = false; _menuFor = null; _linkOpen = false; _linkFrom = null; _linkTo = null; _colorFor = null; _pickEnd = -1; _picker = null; _playersOpen = false;
         }
 
         private static PortalInfo SourcePortal => PortalClient.Get(PortalClient.SourceId);
@@ -1030,7 +1034,7 @@ namespace Portaler
                 Act = () => PortalClient.ToggleFavorite(p),
             });
             MenuItems.Add(new MenuItem { Text = "Category...", Key = Plugin.CategoryKey.Value.ToString(), Act = () => _picker = p });
-            MenuItems.Add(new MenuItem { Text = "Rename", Key = Plugin.RenameKey.Value.ToString(), Act = () => PortalClient.BeginRename(p) });
+            MenuItems.Add(new MenuItem { Text = "Rename", Key = Plugin.RenameKey.Value.ToString(), Act = () => OpenRename(p) });
         }
 
         private const float MenuW = 320f, MenuItemH = 34f, MenuGap = 4f, MenuTop = 64f;

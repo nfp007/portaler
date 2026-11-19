@@ -63,7 +63,7 @@ Every feature says what is **🌐 shared** (the same for everybody on the server
 ![Favorites with drag handles, gold (shared) and silver (personal) stars](https://raw.githubusercontent.com/nfp007/portaler/main/docs/f-favorites.jpg)
 
 **4. Categories & filter**
-- Hover a name and press **T** to choose a category: Base, Mine, Farm, Trader, Boss, Danger, Dungeon or Explore.
+- Hover a name and press **T** to choose a category: Base, Mine, Farm, Trader, Boss, Danger, Dungeon or Explore. It can also be set right in the rename window (**E**).
 - The icon shows in the list and inside the portal's ring on the map.
 - One click on an icon in the **Show:** row lists only that category. Click it again (or **All**) to see everything.
 - 🌐 Shared: the category of each portal (anyone can change it).
@@ -105,7 +105,8 @@ Every feature says what is **🌐 shared** (the same for everybody on the server
 
 **9. "Players' last trips"**
 - The last portal each other player travelled to, with their initial, name and how long ago. Click it to follow them.
-- **Players: 2 of 3** in the title opens a window: tick the players you want to follow (online or offline).
+- Only players who are online right now are shown; when nobody else is online, the whole block is hidden.
+- **Players: 2 of 3** in the title opens a window: tick the players you want to follow.
 - 🌐 Shared: every player's last trip (stored on the server).
 - 👤 Personal: whom you follow (per character, saved on your PC).
 
@@ -114,7 +115,9 @@ Every feature says what is **🌐 shared** (the same for everybody on the server
 **10. Automatic names & rename from the list**
 - New portals are named after their biome plus a number, for example `BF-007` or `MO-012`. Numbers keep counting up per biome and are never reused.
 - Portals you name yourself, and existing portals, keep their names.
-- Hover a name in the list and press **E** to rename that portal from anywhere in the world (up to 25 characters).
+- Hover a name in the list (or a map pin) and press **E** to rename that portal from anywhere in the world (up to 25 characters). Pressing **E** on a portal in the world opens the same window.
+- The rename window also sets the portal's **type** (category) in the same step: pick an icon, **Save** (Enter) keeps both, **Cancel** (Esc) keeps neither.
+- With a gamepad the game's own text box is used instead, so the on-screen keyboard still works.
 - 🌐 Shared: portal names (anyone can rename any portal).
 
 ![Portals named automatically by biome](https://raw.githubusercontent.com/nfp007/portaler/main/docs/f-names.jpg)
@@ -187,7 +190,7 @@ All shared data is stored on the server, next to the world save, and survives re
 | Link a portal | Standing in a portal: hover a name or pin and press **L**. Looking at a portal in the world: **L** (press twice to remove a link) |
 | Portal colour | Hover a name or pin, or look at a portal, and press **C** |
 | See a portal on the map | Hover its name for a moment |
-| Rename a portal | Hover its name and press **E**, then Enter to save or Esc to cancel |
+| Rename a portal | Hover its name or pin (or look at the portal) and press **E**: type the name, pick the type, Enter saves, Esc cancels |
 | Set a category | Hover its name and press **T**, click a category (Esc closes) |
 | Show one category | Click its icon in the **Show:** row; click again or **All** for everything |
 | Reorder favorites | Drag a favorite by its handle (the three lines on the left) |

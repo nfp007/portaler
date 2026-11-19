@@ -1,5 +1,10 @@
 # Changelog
 
+## 2.0.6
+- **Rename with portal type**: **E** (on a list row, a map pin or a portal in the world) opens Portaler's own rename window: the name and the portal's type (category) in one step. Enter saves both, Esc cancels. Wards still decide who may rename a portal in the world. With a gamepad the game's text box is used, so the on-screen keyboard keeps working.
+- **Players' last trips** only shows players who are online right now; with nobody else online, the whole block is hidden.
+- Only the client changes; the server does not need to be updated.
+
 ## 2.0.5
 - **Back to your grave**: after you die, the first portal you walk into shows a "You died" window with the portal nearest to your newest grave and the portal of your last trip (one button when it is the same portal). Keys **1** / **2**, Enter = first, Esc = close. New setting `[List] GraveDialog` (on by default).
 - **Arrow keys**: up / down move through the list, left / right jump between groups, Enter travels; the windows work the same way. Moving the mouse switches back to mouse control.
