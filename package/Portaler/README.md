@@ -19,7 +19,10 @@ Built for servers that play together:
 - **Search, sorting** (biome, name, distance), foldable groups and blocks you can drag into your own order.
 - **Fast**: trips take about 4-6 s instead of the game's 9-10 s (you arrive as soon as the target area is loaded), the map opens without a freeze, and the list uses under 2 ms per frame.
 - **Automatic names** by biome (`BF-007`, `MO-012`) and renaming any portal right from the list.
+- **Back to your grave**: after a death, the first portal offers the portal nearest your grave and your last trip, one key press away.
 - **Gamepad support**: the list and all its windows work with a controller (Steam Deck too).
+- **Arrow keys**: move through the list and travel without the mouse.
+- **Works with TeleportEverything**: bring your tames and carts along.
 
 Everybody has the same rights: anyone can rename, set categories or change shared favorites. Everything shared is synced through the server and kept with the world save, so it survives restarts and mod updates.
 
