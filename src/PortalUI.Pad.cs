@@ -26,7 +26,7 @@ namespace Portaler
         private static Vector2 Pointer(Event ev) => PortalPad.Active ? _padPoint : ev.mousePosition;
 
         /// <summary>Which window gets the input (same order as in Draw).</summary>
-        private static int WindowKind => _picker != null ? 1 : _playersOpen ? 2 : _menuFor != null ? 3 : _linkOpen ? 4 : _colorFor != null ? 5 : 0;
+        private static int WindowKind => _graveOpen ? 6 : _picker != null ? 1 : _playersOpen ? 2 : _menuFor != null ? 3 : _linkOpen ? 4 : _colorFor != null ? 5 : 0;
 
         /// <summary>Called once per frame (Layout) before anything is drawn.</summary>
         private static void PadStep(ref PortalInfo travel, ref PortalInfo toggle)
@@ -124,6 +124,13 @@ namespace Portaler
                     t.Add(LinkButton(lr, 0)); t.Add(LinkButton(lr, 1));
                     return LinkReady ? t.Count - 2 : _linkTo == null ? 1 : 0;
                 }
+                case 6:
+                {
+                    var gr = GraveRect();
+                    for (int i = 0; i < GraveChoices.Count; i++) t.Add(GraveButton(gr, i));
+                    t.Add(GraveClose(gr));
+                    return 0;
+                }
                 case 5:
                 {
                     var cr = ColorRect();
@@ -178,6 +185,7 @@ namespace Portaler
                 case 3: MenuInput(fake); break;
                 case 4: LinkInput(fake); break;
                 case 5: ColorInput(fake); break;
+                case 6: GraveInput(fake); break;
             }
             _modalPress = false; // no mouse-up will follow
             _pickDrag = 0;
@@ -227,6 +235,7 @@ namespace Portaler
             GUI.color = old;
         }
 
+        private const string KeyHint = "Arrow keys: up/down = move, left/right = groups.  Enter = travel.\nMove the mouse to use it again.";
         private const string PadHint = "D-pad: move, left/right = groups.  A = travel, X = favorite, Y = menu, B = close.\nLB / RB = sort.  In windows: D-pad + A, B = back.";
     }
 }

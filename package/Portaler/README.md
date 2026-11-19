@@ -159,6 +159,17 @@ Every feature says what is **🌐 shared** (the same for everybody on the server
 - Portaler does not need it; without it, nothing changes.
 - 👤 / 🌐 As TeleportEverything sets it up (install it on the server and on every client).
 
+**17. Back to your grave**
+- After you die, the first portal you walk into shows a small window: **Nearest to your grave** (the portal closest to your newest grave marker) and **Last trip** (where you went before you died), each with its distance. Same portal for both: one button.
+- Press **1** or **2** (Enter = the first one), click a button, or **Close** (Esc) to use the list as usual. It shows once per death.
+- It uses the game's own grave marker on your map; if you removed the marker, the window does not show.
+- 👤 Personal: setting `[List] GraveDialog` (on by default).
+
+**18. Arrow keys**
+- Arrow keys up / down move through the list, left / right jump between groups, **Enter** travels. The windows (menu, colour, category, link, players, grave) work the same way.
+- Moving the mouse switches back to mouse control.
+- 👤 Personal.
+
 All shared data is stored on the server, next to the world save, and survives restarts and mod updates.
 
 <details>
@@ -186,6 +197,8 @@ All shared data is stored on the server, next to the world save, and survives re
 | Reverse sorting | Click the active sort button again |
 | Scroll the list | Mouse wheel over the list |
 | Close | **Close** button, Esc, or walk out of the portal |
+| Move with the keyboard | Arrow keys up / down (left / right = groups), **Enter** travels; moving the mouse ends it |
+| After a death | The first portal shows "You died": **1** = nearest to your grave, **2** = last trip, Esc = close |
 
 **Gamepad** (when you play with a controller; moving the mouse switches back to mouse control):
 
@@ -215,6 +228,7 @@ Config file: `BepInEx/config/nfp007.Portaler.cfg` (created on first start). `[Se
 | `[Controls] CategoryKey` | `T` | Key to choose the hovered portal's category. |
 | `[Controls] LinkKey` | `L` | Link the portal you stand in to the hovered name or pin; in the world: link or unlink the portal you look at. |
 | `[Controls] ColorKey` | `C` | Choose the colour of the hovered name, pin, or the portal you look at. |
+| `[List] GraveDialog` | `true` | After a death, the first portal you walk into offers the portal nearest your grave and your last trip. |
 | `[Controls] Gamepad` | `true` | Use the portal list with a gamepad (see Controls). `false` = the gamepad works on the map as in the vanilla game. |
 | `[World] FloatingNames` | `true` | Show the destination's name above linked portals near you. |
 | `[World] FloatingNameDistance` | `20` | How close (metres) you must be to see it. |

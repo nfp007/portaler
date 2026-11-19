@@ -1,6 +1,8 @@
 # Changelog
 
 ## 2.0.5
+- **Back to your grave**: after you die, the first portal you walk into shows a "You died" window with the portal nearest to your newest grave and the portal of your last trip (one button when it is the same portal). Keys **1** / **2**, Enter = first, Esc = close. New setting `[List] GraveDialog` (on by default).
+- **Arrow keys**: up / down move through the list, left / right jump between groups, Enter travels; the windows work the same way. Moving the mouse switches back to mouse control.
 - **Works with TeleportEverything**: install [TeleportEverything](https://thunderstore.io/c/valheim/p/OdinPlus/TeleportEverything/) next to Portaler and your tames and carts travel with you on Portaler trips (list, map pin and linked portals). Portaler does not need it.
 - Portaler trips keep Portaler's own quick arrival also when TeleportEverything (with its QuickTeleport part) is installed. Set `[Travel] QuickArrival = false` to leave the timing to QuickTeleport.
 - The BepInEx log says when TeleportEverything or a teleport-timing mod is found.

@@ -59,6 +59,24 @@ namespace Portaler
             set { Load(); value = Mathf.Clamp(value, 1, MaxLastBuilt); if (_lastBuiltCount != value) { _lastBuiltCount = value; Save(); } }
         }
 
+        // small per-character values: "Dest" = position of the last portal travelled to, "Grave" = the grave the dialog was shown for
+        private static readonly System.Collections.Generic.Dictionary<string, string> Misc = new System.Collections.Generic.Dictionary<string, string>();
+
+        public static string GetMisc(string name)
+        {
+            Load();
+            return Misc.TryGetValue(name + "." + CharKey, out var v) ? v : null;
+        }
+
+        public static void SetMisc(string name, string value)
+        {
+            Load();
+            string k = name + "." + CharKey;
+            if (Misc.TryGetValue(k, out var old) && old == value) return;
+            Misc[k] = value;
+            Save();
+        }
+
         // order of the movable groups, per character
         public static readonly string[] DefaultGroupOrder = { "BACK", "TRIPS", "FAV", "LAST", "PORTALS" };
         private static readonly System.Collections.Generic.Dictionary<string, System.Collections.Generic.List<string>> GroupOrders =
@@ -168,6 +186,7 @@ namespace Portaler
                         }
                         if (list.Count > 0) Back[k.Substring(5)] = list;
                     }
+                    else if (k.StartsWith("Dest.") || k.StartsWith("Grave.")) Misc[k] = v;
                     else if (k.StartsWith("Groups."))
                         GroupOrders[k.Substring(7)] = new System.Collections.Generic.List<string>(
                             v.Split(new[] { ',' }, StringSplitOptions.RemoveEmptyEntries));
@@ -205,6 +224,7 @@ namespace Portaler
                     if (kv.Value.Count > 0)
                         lines.Add("Back." + kv.Key + "=" + string.Join("|", kv.Value.Select(p =>
                             p.x.ToString("0.###", ic) + ";" + p.y.ToString("0.###", ic) + ";" + p.z.ToString("0.###", ic)).ToArray()));
+                foreach (var kv in Misc) lines.Add(kv.Key + "=" + kv.Value);
                 foreach (var kv in GroupOrders) lines.Add("Groups." + kv.Key + "=" + string.Join(",", kv.Value.ToArray()));
                 // an empty choice is kept too ("-"): it means "nobody", not "everybody"
                 foreach (var kv in Tracked) lines.Add("Track." + kv.Key + "=" + (kv.Value.Count > 0 ? string.Join("|", kv.Value.ToArray()) : "-"));

@@ -401,6 +401,45 @@ namespace Portaler
             RequestList();
             Minimap.instance.SetMapMode(Minimap.MapMode.Large);
             PortalUI.OnOpened();
+            if (!fromWorldKey) PortalUI.CheckGrave(); // first portal after a death: "You died" dialog
+        }
+
+        private static readonly System.Globalization.CultureInfo Inv = System.Globalization.CultureInfo.InvariantCulture;
+        public static string PosText(Vector3 p) => p.x.ToString("0.#", Inv) + ";" + p.y.ToString("0.#", Inv) + ";" + p.z.ToString("0.#", Inv);
+
+        /// <summary>The portal standing at a position written by <see cref="PosText"/> (within 2 m), or null.</summary>
+        public static PortalInfo PortalAt(string posText)
+        {
+            if (string.IsNullOrEmpty(posText)) return null;
+            var c = posText.Split(';');
+            if (c.Length != 3 || !float.TryParse(c[0], System.Globalization.NumberStyles.Float, Inv, out float x) ||
+                !float.TryParse(c[1], System.Globalization.NumberStyles.Float, Inv, out float y) ||
+                !float.TryParse(c[2], System.Globalization.NumberStyles.Float, Inv, out float z)) return null;
+            var pos = new Vector3(x, y, z);
+            PortalInfo best = null; float bestD = 2f;
+            foreach (var p in Portals)
+            {
+                float d = Vector3.Distance(p.Position, pos);
+                if (d < bestD) { bestD = d; best = p; }
+            }
+            return best;
+        }
+
+        /// <summary>Newest grave marker ("death" pin) on this player's map; day = the in-game day it shows, 0 if unknown.</summary>
+        public static bool NewestGrave(out Vector3 pos, out int day)
+        {
+            pos = Vector3.zero; day = -1;
+            var all = Minimap.instance != null ? PinsField.Get(Minimap.instance) : null;
+            if (all == null) return false;
+            foreach (var pin in all)
+            {
+                if (pin == null || pin.m_type != Minimap.PinType.Death) continue;
+                int d = 0;
+                var m = System.Text.RegularExpressions.Regex.Match(pin.m_name ?? "", @"\d+");
+                if (m.Success) int.TryParse(m.Value, out d);
+                if (d >= day) { day = d; pos = pin.m_pos; } // same day: the later pin wins
+            }
+            return day >= 0;
         }
 
         public static void Deactivate(bool closeMap)
@@ -817,6 +856,7 @@ namespace Portaler
             Vector3 exit = target.Position + target.Rotation * Vector3.forward * _exitDistance + Vector3.up;
             var pt = Perf.Begin();
             Prefs.PushBack(SourcePosition); // the "Back to" rows will offer the portal we leave from
+            Prefs.SetMisc("Dest", PosText(target.Position)); // "Last trip" in the grave dialog
             // tell the server (and so everybody) where we went: "Players' last trips"
             if (ZRoutedRpc.instance != null && LocalPlayerId != 0)
                 ZRoutedRpc.instance.InvokeRoutedRPC(PortalServer.RpcTrip, LocalPlayerId, player.GetPlayerName(), target.Id);

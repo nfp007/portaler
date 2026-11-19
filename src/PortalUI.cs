@@ -46,7 +46,7 @@ namespace Portaler
         public static bool BlocksKeys => SearchFocused || WindowOpen;
 
         /// <summary>A Portaler window (menu, link dialog, colour, category, players) is open over the list.</summary>
-        public static bool WindowOpen => _picker != null || _playersOpen || _menuFor != null || _linkOpen || _colorFor != null;
+        public static bool WindowOpen => _graveOpen || _picker != null || _playersOpen || _menuFor != null || _linkOpen || _colorFor != null;
 
         // category filter (0 = all) and category window
         private static int _catFilter;
@@ -129,7 +129,9 @@ namespace Portaler
             _rect = new Rect(16f, top, _width, Mathf.Max(300f, Screen.height - top - 70f));
             var ev = Event.current;
             PortalInfo travel = null, toggle = null;
-            // gamepad: once per frame, before anything is drawn
+            // moving or clicking the mouse ends arrow-key control
+            if (ev.type == EventType.MouseMove || ev.type == EventType.MouseDown) PortalPad.KeyNav = false;
+            // gamepad / arrow keys: once per frame, before anything is drawn
             if (ev.type == EventType.Layout && !TextInput.IsVisible()) PadStep(ref travel, ref toggle);
             MouseOverList = _rect.Contains(ev.mousePosition);
             if (ev.type == EventType.MouseDown && MouseOverList) _pressedInList = true;
@@ -138,7 +140,8 @@ namespace Portaler
             // Category window: handled before the list so the list never sees these clicks.
             // a press on any Portaler window must not reach the map underneath
             if (WindowOpen && ev.type == EventType.MouseDown) _modalPress = true;
-            if (_picker != null) PickerInput(ev);
+            if (_graveOpen) GraveInput(ev);
+            else if (_picker != null) PickerInput(ev);
             else if (_playersOpen) PlayersInput(ev);
             else if (_menuFor != null) MenuInput(ev);
             else if (_linkOpen) LinkInput(ev);
@@ -248,12 +251,13 @@ namespace Portaler
                 HoveredPortal = WindowOpen || _drag != null || _dragGroup != null ? null
                               : PortalPad.Active ? _padPortal
                               : MouseOverList ? _hovered : null;
-                if (_picker != null || _playersOpen || _linkOpen || _colorFor != null) DimScreen();
+                if (_graveOpen || _picker != null || _playersOpen || _linkOpen || _colorFor != null) DimScreen();
                 if (_picker != null) DrawPicker(ev);
                 if (_playersOpen) DrawPlayers(ev);
                 if (_menuFor != null) DrawMenu(ev);
                 if (_linkOpen) DrawLink(ev);
                 if (_colorFor != null) DrawColor(ev);
+                if (_graveOpen) DrawGrave(ev);
                 if (PortalPad.Active && WindowOpen && _padWin > 0 && _padWinFocus < PadTargets.Count) DrawFocusFrame(PadTargets[_padWinFocus]);
             }
 
@@ -952,7 +956,7 @@ namespace Portaler
 
         private static void CloseWindows()
         {
-            _menuFor = null; _linkOpen = false; _linkFrom = null; _linkTo = null; _colorFor = null; _pickEnd = -1; _picker = null; _playersOpen = false;
+            _graveOpen = false; _menuFor = null; _linkOpen = false; _linkFrom = null; _linkTo = null; _colorFor = null; _pickEnd = -1; _picker = null; _playersOpen = false;
         }
 
         private static PortalInfo SourcePortal => PortalClient.Get(PortalClient.SourceId);
@@ -1138,7 +1142,7 @@ namespace Portaler
             if (ev.type == EventType.KeyDown)
             {
                 if (ev.keyCode == KeyCode.Escape) { CloseWindows(); ev.Use(); return; }
-                if (ev.keyCode == KeyCode.Return || ev.keyCode == KeyCode.KeypadEnter) { DoLink(); ev.Use(); return; }
+                if ((ev.keyCode == KeyCode.Return || ev.keyCode == KeyCode.KeypadEnter) && !PortalPad.KeyNav) { DoLink(); ev.Use(); return; }
             }
             if (ev.type == EventType.MouseDown)
             {
@@ -1302,7 +1306,7 @@ namespace Portaler
         {
             var cr = ColorRect();
             if (ev.type == EventType.KeyDown && (ev.keyCode == KeyCode.Escape || ev.keyCode == Plugin.ColorKey.Value)) { _colorFor = null; ev.Use(); return; }
-            if (ev.type == EventType.KeyDown && (ev.keyCode == KeyCode.Return || ev.keyCode == KeyCode.KeypadEnter))
+            if (ev.type == EventType.KeyDown && (ev.keyCode == KeyCode.Return || ev.keyCode == KeyCode.KeypadEnter) && !PortalPad.KeyNav)
             { PortalClient.SetColor(_colorFor, PortalColors.FromColor(PickColor)); _colorFor = null; ev.Use(); return; }
             var mp = ev.mousePosition;
             if (ev.type == EventType.MouseDown)
@@ -1357,7 +1361,7 @@ namespace Portaler
 
             // custom colour
             EnsurePickerTextures();
-            _placeholder.Draw(new Rect(cr.x + 16f, cr.y + PickTop, cr.width - 32f, 22f), Tmp(PortalPad.Active ? "Or pick your own colour (right stick, LB / RB):" : "Or pick your own colour:"), false, false, false, false);
+            _placeholder.Draw(new Rect(cr.x + 16f, cr.y + PickTop, cr.width - 32f, 22f), Tmp(PortalPad.PadInput ? "Or pick your own colour (right stick, LB / RB):" : "Or pick your own colour:"), false, false, false, false);
             var sv = SvRect(cr); var hue = HueRect(cr);
             var old = GUI.color;
             GUI.color = new Color32(30, 20, 14, 255);
@@ -1662,7 +1666,8 @@ namespace Portaler
 
         private static string HintText()
         {
-            if (PortalPad.Active) return PadHint;
+            if (PortalPad.PadInput) return PadHint;
+            if (PortalPad.KeyNav) return KeyHint;
             if (_hintText == null || _hintRename != Plugin.RenameKey.Value || _hintCategory != Plugin.CategoryKey.Value || _hintLink != Plugin.LinkKey.Value || _hintColor != Plugin.ColorKey.Value)
             {
                 _hintRename = Plugin.RenameKey.Value; _hintCategory = Plugin.CategoryKey.Value;
