@@ -18,7 +18,7 @@ Built for servers that play together:
 - **Last built**: the newest portals on the server.
 - **Search, sorting** (biome, name, distance), foldable groups and blocks you can drag into your own order.
 - **Fast**: trips take about 4-6 s instead of the game's 9-10 s (you arrive as soon as the target area is loaded), the map opens without a freeze, and the list uses under 2 ms per frame.
-- **Automatic names** by biome (`BF-007`, `MO-012`) and renaming any portal right from the list.
+- **Automatic names** by biome (`BF-007`, `MO-012`), and one compact **Edit portal** window (**E**) for name, type and colour.
 - **Back to your grave**: after a death, the first portal offers the portal nearest your grave and your last trip, one key press away.
 - **Gamepad support**: the list and all its windows work with a controller (Steam Deck too).
 - **Arrow keys**: move through the list and travel without the mouse.
@@ -111,13 +111,16 @@ Every feature says what is **🌐 shared** (the same for everybody on the server
 
 ![Choosing whose trips to follow](https://raw.githubusercontent.com/nfp007/portaler/main/docs/f-trips.jpg)
 
-**10. Automatic names & rename from the list**
+**10. Automatic names & the Edit portal window**
 - New portals are named after their biome plus a number, for example `BF-007` or `MO-012`. Numbers keep counting up per biome and are never reused.
 - Portals you name yourself, and existing portals, keep their names.
-- Hover a name in the list (or a map pin) and press **E** to rename that portal from anywhere in the world (up to 25 characters). Pressing **E** on a portal in the world opens the same window.
-- The rename window also sets the portal's **type** (category) in the same step: pick an icon, **Save** (Enter) keeps both, **Cancel** (Esc) keeps neither.
-- With a gamepad the game's own text box is used instead, so the on-screen keyboard still works.
-- 🌐 Shared: portal names (anyone can rename any portal).
+- Press **E** on a name in the list, on a map pin, or on a portal in the world: one compact window edits the portal's **name** (up to 25 characters), **type** (category) and **colour**.
+- **Own...** next to Vanilla opens a small picker for any colour you like; **Use** brings it back to the edit window.
+- Nothing is written until **Save** (Enter): name, type and colour are saved together. **Cancel** (Esc) keeps everything as it was.
+- In the world, wards still decide who may edit a portal, as in the game. With a gamepad the game's own text box is used for the name, so the on-screen keyboard still works.
+- 🌐 Shared: portal names, types and colours (anyone can change them).
+
+![The Edit portal window and the own-colour picker](https://raw.githubusercontent.com/nfp007/portaler/main/docs/f-edit.jpg)
 
 ![Portals named automatically by biome](https://raw.githubusercontent.com/nfp007/portaler/main/docs/f-names.jpg)
 
@@ -183,7 +186,7 @@ All shared data is stored on the server, next to the world save, and survives re
 | Link a portal | Standing in a portal: hover a name or pin and press **L**. Looking at a portal in the world: **L** (press twice to remove a link) |
 | Portal colour | Hover a name or pin, or look at a portal, and press **C** |
 | See a portal on the map | Hover its name for a moment |
-| Rename a portal | Hover its name or pin (or look at the portal) and press **E**: type the name, pick the type, Enter saves, Esc cancels |
+| Edit a portal (name, type, colour) | Hover its name or pin (or look at the portal) and press **E**; Enter saves all, Esc cancels |
 | Set a category | Hover its name and press **T**, click a category (Esc closes) |
 | Show one category | Click its icon in the **Show:** row; click again or **All** for everything |
 | Reorder favorites | Drag a favorite by its handle (the three lines on the left) |

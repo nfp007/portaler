@@ -1,5 +1,11 @@
 # Changelog
 
+## 2.0.7
+- **Edit portal window**: **E** now opens one compact window for the portal's name, type and colour. **Own...** (next to Vanilla) opens a small picker for any colour. Everything is saved together with **Save** (Enter); **Cancel** (Esc) keeps the portal as it was. The menu entry is now **Edit...**.
+- **T** (type) and **C** (colour) still work as shortcuts; linking stays on **L** and in the right-click menu.
+- README: picture of the new window in the features section.
+- Only the client changes; the server does not need to be updated.
+
 ## 2.0.6
 - **Rename with portal type**: **E** (on a list row, a map pin or a portal in the world) opens Portaler's own rename window: the name and the portal's type (category) in one step. Enter saves both, Esc cancels. Wards still decide who may rename a portal in the world. With a gamepad the game's text box is used, so the on-screen keyboard keeps working.
 - **Players' last trips** only shows players who are online right now; with nobody else online, the whole block is hidden.

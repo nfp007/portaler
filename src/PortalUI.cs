@@ -1034,7 +1034,7 @@ namespace Portaler
                 Act = () => PortalClient.ToggleFavorite(p),
             });
             MenuItems.Add(new MenuItem { Text = "Category...", Key = Plugin.CategoryKey.Value.ToString(), Act = () => _picker = p });
-            MenuItems.Add(new MenuItem { Text = "Rename", Key = Plugin.RenameKey.Value.ToString(), Act = () => OpenRename(p) });
+            MenuItems.Add(new MenuItem { Text = "Edit...", Key = Plugin.RenameKey.Value.ToString(), Act = () => OpenRename(p) });
         }
 
         private const float MenuW = 320f, MenuItemH = 34f, MenuGap = 4f, MenuTop = 64f;
@@ -1676,7 +1676,7 @@ namespace Portaler
             {
                 _hintRename = Plugin.RenameKey.Value; _hintCategory = Plugin.CategoryKey.Value;
                 _hintLink = Plugin.LinkKey.Value; _hintColor = Plugin.ColorKey.Value;
-                _hintText = $"Click a name or a map pin to travel. Right click = menu.\n{_hintRename} = rename, {_hintCategory} = category, {Plugin.LinkKey.Value} = link, {Plugin.ColorKey.Value} = colour. Drag titles by their handle.";
+                _hintText = $"Click a name or a map pin to travel. Right click = menu.\n{_hintRename} = edit (name, type, colour), {Plugin.LinkKey.Value} = link. Drag titles by their handle.";
             }
             return _hintText;
         }
