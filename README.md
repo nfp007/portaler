@@ -22,7 +22,6 @@ Built for servers that play together:
 - **Back to your grave**: after a death, the first portal offers the portal nearest your grave and your last trip, one key press away.
 - **Gamepad support**: the list and all its windows work with a controller (Steam Deck too).
 - **Arrow keys**: move through the list and travel without the mouse.
-- **Works with TeleportEverything**: bring your tames and carts along.
 
 Everybody has the same rights: anyone can rename, set categories or change shared favorites. Everything shared is synced through the server and kept with the world save, so it survives restarts and mod updates.
 
@@ -159,19 +158,13 @@ Every feature says what is **🌐 shared** (the same for everybody on the server
 - The search box and the **Show:** category filter still need a mouse or keyboard.
 - 👤 Personal: setting `[Controls] Gamepad` (on by default).
 
-**16. Bring your tames along (with TeleportEverything)**
-- Want your wolves, lox or boars, or your cart, to come with you? Install [TeleportEverything](https://thunderstore.io/c/valheim/p/OdinPlus/TeleportEverything/) next to Portaler.
-- Every Portaler trip (list, map pin or linked portal) goes through the game's own teleport, which is where TeleportEverything takes tames and carts along. Its settings decide what comes with you.
-- Portaler does not need it; without it, nothing changes.
-- 👤 / 🌐 As TeleportEverything sets it up (install it on the server and on every client).
-
-**17. Back to your grave**
+**16. Back to your grave**
 - After you die, the first portal you walk into shows a small window: **Nearest to your grave** (the portal closest to your newest grave marker) and **Last trip** (where you went before you died), each with its distance. Same portal for both: one button.
 - Press **1** or **2** (Enter = the first one), click a button, or **Close** (Esc) to use the list as usual. It shows once per death.
 - It uses the game's own grave marker on your map; if you removed the marker, the window does not show.
 - 👤 Personal: setting `[List] GraveDialog` (on by default).
 
-**18. Arrow keys**
+**17. Arrow keys**
 - Arrow keys up / down move through the list, left / right jump between groups, **Enter** travels. The windows (menu, colour, category, link, players, grave) work the same way.
 - Moving the mouse switches back to mouse control.
 - 👤 Personal.
