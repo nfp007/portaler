@@ -87,7 +87,7 @@ namespace Portaler
                 Originals[tw] = o;
             }
             if (o.Applied == color) return;
-            if (!PortalUI.RenameOpen)
+            if (Perf.On && !PortalUI.RenameOpen)
                 Plugin.Log.LogInfo($"Portal colour: {PortalColors.Name(o.Applied < 0 ? 0 : o.Applied)} -> {PortalColors.Name(color)} at {tw.transform.position}");
             o.Applied = color;
             try
