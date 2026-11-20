@@ -87,6 +87,8 @@ namespace Portaler
                 Originals[tw] = o;
             }
             if (o.Applied == color) return;
+            if (!PortalUI.RenameOpen)
+                Plugin.Log.LogInfo($"Portal colour: {PortalColors.Name(o.Applied < 0 ? 0 : o.Applied)} -> {PortalColors.Name(color)} at {tw.transform.position}");
             o.Applied = color;
             try
             {
@@ -144,8 +146,12 @@ namespace Portaler
         private static Color Recolor(Color orig, Color target)
         {
             Color.RGBToHSV(orig, out _, out float s, out float v);
-            Color.RGBToHSV(target, out float th, out float ts, out _);
-            var n = Color.HSVToRGB(th, Mathf.Clamp01(ts * Mathf.Max(s, 0.15f)), v, true);
+            Color.RGBToHSV(target, out float th, out float ts, out float tv);
+            // hue from the portal colour; at least 60 % of its saturation, so pale fire still shows it;
+            // brightness follows the colour too, so dark colours give dark fire (black = almost black flames)
+            float sat = Mathf.Clamp01(ts * Mathf.Max(s, 0.6f));
+            float val = v * Mathf.Lerp(0.12f, 1f, tv);
+            var n = Color.HSVToRGB(th, sat, val, true);
             n.a = orig.a;
             return n;
         }
