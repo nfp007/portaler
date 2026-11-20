@@ -4,6 +4,8 @@
 - **One window for portal settings**: right click on a list row or a map pin now shows **Edit portal...**, which opens the Edit portal window (name, type, colour). The separate "Colour..." and "Category..." entries and their old windows are gone; the menu is shorter (Travel here, Edit portal..., Link..., Remove link, Favorite).
 - **C** and **T** also open the Edit portal window (in the list, on a map pin, and **C** on a portal in the world). The portal's hover text shows "[C] Edit portal".
 - **Gamepad in Edit portal**: the D-pad moves between name, types, colours and Save / Cancel, **A** presses, **B** cancels. **A** on the name opens the game's text box with the on-screen keyboard. "Own..." works with the right stick and LB / RB.
+- The keys shown in the right-click menu (**E** = Edit portal, **L** = Link) now work while the menu is open, from a list row and from a map pin.
+- Saving or closing the Edit portal window on a portal in the world no longer makes your character attack.
 - Only the client changes; the server does not need to be updated.
 
 ## 2.0.7

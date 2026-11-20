@@ -56,8 +56,17 @@ namespace Portaler
             TextInput.instance.RequestText(new NameReceiver(), "Portal name", PortalClient.MaxNameLength);
         }
 
+        // after the window closes in the world, the click / Enter that closed it must not reach the character (attack)
+        private static float _blockGameUntil;
+
         private static void CloseRename()
         {
+            if (_renameFor != null)
+            {
+                _blockGameUntil = Time.unscaledTime + 0.3f;
+                try { ZInput.ResetButtonStatus("Attack"); ZInput.ResetButtonStatus("SecondaryAttack"); ZInput.ResetButtonStatus("Use"); }
+                catch { }
+            }
             _renameFor = null;
             _ownOpen = false;
             if (GUI.GetNameOfFocusedControl() == RenameControl) GUIUtility.keyboardControl = 0;
@@ -363,7 +372,13 @@ namespace Portaler
         private static class TextInput_Update
         {
             private static readonly AccessTools.FieldRef<TextInput, bool> Visible = AccessTools.FieldRefAccess<TextInput, bool>("m_visibleFrame");
-            private static void Postfix(TextInput __instance) { if (_renameFor != null) Visible(__instance) = true; }
+            private static void Postfix(TextInput __instance)
+            {
+                // open, or just closed and the mouse button that closed it is still down
+                bool hold = Time.unscaledTime < _blockGameUntil || (_blockGameUntil > 0f && (Input.GetMouseButton(0) || Input.GetMouseButton(1)));
+                if (!hold) _blockGameUntil = 0f;
+                if (_renameFor != null || hold) Visible(__instance) = true;
+            }
         }
 
         /// <summary>E on a portal in the world opens Portaler's edit window (wards still apply, as in the game).</summary>

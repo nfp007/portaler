@@ -933,7 +933,7 @@ namespace Portaler
         private static GUIStyle _linkTag, _pickHint, _menuText, _keyText;
         private static Texture2D _arrowLink, _arrowLinkBack, _arrowSwap;
 
-        private sealed class MenuItem { public string Text, Key, Dest; public System.Action Act; }
+        private sealed class MenuItem { public string Text, Key, Dest; public KeyCode KeyCode; public System.Action Act; }
         private static PortalInfo _menuFor;
         private static Vector2 _menuPos;
         private static readonly List<MenuItem> MenuItems = new List<MenuItem>();
@@ -1010,8 +1010,8 @@ namespace Portaler
             var src = SourcePortal;
             if (src == null || p.Id != src.Id)
                 MenuItems.Add(new MenuItem { Text = "Travel here", Act = () => PortalClient.TeleportTo(p) });
-            MenuItems.Add(new MenuItem { Text = "Edit portal...", Key = Plugin.RenameKey.Value.ToString(), Act = () => OpenRename(p) });
-            MenuItems.Add(new MenuItem { Text = "Link...", Key = Plugin.LinkKey.Value.ToString(), Act = () => LinkFromHere(p) });
+            MenuItems.Add(new MenuItem { Text = "Edit portal...", Key = Plugin.RenameKey.Value.ToString(), KeyCode = Plugin.RenameKey.Value, Act = () => OpenRename(p) });
+            MenuItems.Add(new MenuItem { Text = "Link...", Key = Plugin.LinkKey.Value.ToString(), KeyCode = Plugin.LinkKey.Value, Act = () => LinkFromHere(p) });
             var dest = PortalClient.LinkOf(p);
             if (dest != null)
                 MenuItems.Add(new MenuItem { Text = "Remove link", Dest = dest.DisplayName, Act = () => PortalClient.SetLink(p, null) });
@@ -1039,6 +1039,16 @@ namespace Portaler
         {
             var mr = MenuRect();
             if (ev.type == EventType.KeyDown && ev.keyCode == KeyCode.Escape) { _menuFor = null; ev.Use(); return; }
+            // the key shown next to an entry runs it
+            if (ev.type == EventType.KeyDown && ev.keyCode != KeyCode.None)
+                foreach (var it in MenuItems)
+                    if (it.KeyCode != KeyCode.None && it.KeyCode == ev.keyCode)
+                    {
+                        _menuFor = null;
+                        ev.Use();
+                        it.Act();
+                        return;
+                    }
             if (ev.type == EventType.MouseDown)
             {
                 _modalPress = true;
