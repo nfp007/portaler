@@ -560,18 +560,26 @@ namespace Portaler
             }
         }
 
-        /// <summary>Text added to a portal's hover text: where it leads, and the L / C keys.</summary>
-        public static string HoverExtra(TeleportWorld tw)
+        /// <summary>
+        /// A portal's hover text: the game's "[E] Set tag" becomes "[E] Edit portal" (E opens Portaler's window),
+        /// plus where it leads and the L key.
+        /// </summary>
+        public static string HoverText(TeleportWorld tw, string vanilla)
         {
             var nview = tw != null ? tw.GetComponent<ZNetView>() : null;
-            if (nview == null || !nview.IsValid()) return "";
+            if (nview == null || !nview.IsValid()) return vanilla;
             var p = Get(nview.GetZDO().m_uid);
-            if (p == null) return "";
+            if (p == null) return vanilla;
+            string text = vanilla ?? "";
+            if (Localization.instance != null)
+            {
+                string setTag = Localization.instance.Localize("$piece_portal_settag");
+                if (!string.IsNullOrEmpty(setTag)) text = text.Replace(setTag, "Edit portal");
+            }
             var dest = LinkOf(p);
-            var sb = new System.Text.StringBuilder();
+            var sb = new System.Text.StringBuilder(text);
             if (dest != null) sb.Append("\n<color=#ffbe3c>Leads to: ").Append(dest.DisplayName).Append("</color>");
             sb.Append("\n[<color=yellow><b>").Append(Plugin.LinkKey.Value).Append("</b></color>] ").Append(dest != null ? "Remove link" : "Link");
-            sb.Append("   [<color=yellow><b>").Append(Plugin.ColorKey.Value).Append("</b></color>] Edit portal");
             return sb.ToString();
         }
 

@@ -54,7 +54,7 @@ namespace Portaler
         {
             private static void Postfix(TeleportWorld __instance, ref string __result)
             {
-                try { __result += PortalClient.HoverExtra(__instance); } catch { }
+                try { __result = PortalClient.HoverText(__instance, __result); } catch { }
             }
         }
 

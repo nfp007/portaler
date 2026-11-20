@@ -117,7 +117,7 @@ Every feature says what is **🌐 shared** (the same for everybody on the server
 - Press **E** on a name in the list, on a map pin, or on a portal in the world, or right click → **Edit portal...**: one compact window edits the portal's **name** (up to 25 characters), **type** (category) and **colour**. **T** and **C** open the same window.
 - **Own...** next to Vanilla opens a small picker for any colour you like; **Use** brings it back to the edit window.
 - Nothing is written until **Save** (Enter): name, type and colour are saved together. **Cancel** (Esc) keeps everything as it was.
-- In the world, wards still decide who may edit a portal, as in the game.
+- On a portal in the world the hover text shows **[E] Edit portal** (it replaces the game's "Set tag") and **[L] Link**. Wards still decide who may edit a portal, as in the game.
 - With a gamepad the D-pad moves between name, types, colours and Save / Cancel; **A** on the name opens the game's own text box with the on-screen keyboard.
 - 🌐 Shared: portal names, types and colours (anyone can change them).
 
