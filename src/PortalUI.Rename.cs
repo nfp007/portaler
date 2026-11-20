@@ -7,7 +7,7 @@ namespace Portaler
     /// "Edit portal" window: name, type (category) and colour in one compact window. Opened with E on a list row
     /// or map pin, "Edit..." in the menu, or E on a portal in the world. "Own..." opens a small window with the
     /// colour picker; nothing is written until Save (Enter), Cancel (Esc) drops everything.
-    /// With a gamepad the game's own text box is used instead (it brings up the on-screen keyboard).
+    /// With a gamepad the D-pad moves between the buttons; A on the name opens the game's own text box (on-screen keyboard).
     /// While it is open the game treats it like its own text box (cursor shown, player input blocked).
     /// </summary>
     public static partial class PortalUI
@@ -26,14 +26,34 @@ namespace Portaler
         public static void OpenRename(PortalInfo p)
         {
             if (p == null) return;
-            if (PortalPad.PadInput || (ZInput.IsGamepadActive() && !PortalClient.Active)) { PortalClient.BeginRename(p); return; }
             CloseWindows();
+            PortalPad.KeyNav = false;
+            _padWin = -1;
             _renameFor = p;
             _renameText = p.Name ?? "";
             _renameCat = Categories.Clamp(p.Category);
             _renameColor = PortalColors.Clamp(p.Color);
             _ownOpen = false;
             _renameFocus = true;
+        }
+
+        /// <summary>Gamepad: the name is typed in the game's own text box (it brings up the on-screen keyboard).</summary>
+        private sealed class NameReceiver : TextReceiver
+        {
+            public string GetText() => _renameText ?? "";
+            public void SetText(string text)
+            {
+                text = (text ?? "").Trim();
+                if (text.Length > PortalClient.MaxNameLength) text = text.Substring(0, PortalClient.MaxNameLength);
+                _renameText = text;
+            }
+        }
+
+        private static void TypeNameWithPad()
+        {
+            if (TextInput.instance == null || PortalPad.RealTextInput()) return;
+            GUIUtility.keyboardControl = 0;
+            TextInput.instance.RequestText(new NameReceiver(), "Portal name", PortalClient.MaxNameLength);
         }
 
         private static void CloseRename()
@@ -149,6 +169,7 @@ namespace Portaler
         /// <summary>Keys and clicks for the edit window (before anything else sees them).</summary>
         private static void RenameInput(Event ev)
         {
+            if (PortalPad.RealTextInput()) return; // the game's text box (gamepad) has the keys for now
             if (_ownOpen) { OwnInput(ev); return; }
             var rr = RenameRect();
             if (ev.type == EventType.KeyDown)
@@ -160,7 +181,12 @@ namespace Portaler
             {
                 _modalPress = true;
                 var mp = ev.mousePosition;
-                if (RenameFieldRect(rr).Contains(mp)) { _renameFocus = true; return; } // the text field takes it
+                if (RenameFieldRect(rr).Contains(mp))
+                {
+                    if (PortalPad.PadInput) { ev.Use(); TypeNameWithPad(); }
+                    else _renameFocus = true; // the text field takes the click
+                    return;
+                }
                 ev.Use();
                 for (int c = 0; c < Categories.Count; c++)
                     if (RenameTile(rr, c).Contains(mp)) { _renameCat = c; return; }
@@ -211,7 +237,7 @@ namespace Portaler
             }
             var rr = RenameRect();
             var field = RenameFieldRect(rr);
-            var mp = _ownOpen ? new Vector2(-9999f, -9999f) : ev.mousePosition;
+            var mp = _ownOpen ? new Vector2(-9999f, -9999f) : Pointer(ev);
             if (ev.type == EventType.Repaint)
             {
                 DimScreen();
@@ -262,7 +288,7 @@ namespace Portaler
             GUI.SetNextControlName(RenameControl);
             string typed = GUI.TextField(field, _renameText ?? "", PortalClient.MaxNameLength, _renameField);
             if (!_ownOpen) _renameText = typed;
-            if (_renameFocus && !_ownOpen && ev.type == EventType.Repaint)
+            if (_renameFocus && !_ownOpen && !PortalPad.PadInput && ev.type == EventType.Repaint)
             {
                 GUI.FocusControl(RenameControl);
                 _renameFocus = false;
@@ -271,12 +297,15 @@ namespace Portaler
                 _renameCount.Draw(field, Tmp($"{(_renameText ?? "").Length} / {PortalClient.MaxNameLength}"), false, false, false, false);
 
             if (_ownOpen && ev.type == EventType.Repaint) DrawOwn(ev);
+            // gamepad: gold frame on the chosen button (drawn here, on top of the window)
+            if (ev.type == EventType.Repaint && PortalPad.PadInput && (_padWin == 7 || _padWin == 8) && _padWinFocus < PadTargets.Count && !PortalPad.RealTextInput())
+                DrawFocusFrame(PadTargets[_padWinFocus]);
         }
 
         private static void DrawOwn(Event ev)
         {
             var or = OwnRect();
-            var mp = ev.mousePosition;
+            var mp = Pointer(ev);
             DimScreen();
             DrawBoard(or, "picker", 6);
             _pickerTitle.Draw(new Rect(or.x + 20f, or.y + 10f, or.width - 40f, 28f), Tmp("Your own colour"), false, false, false, false);
@@ -318,6 +347,12 @@ namespace Portaler
         {
             EnsureStyles();
             var ev = Event.current;
+            if (ev.type == EventType.Layout && !PortalPad.RealTextInput())
+            {
+                PortalInfo travel = null, toggle = null;
+                PadStep(ref travel, ref toggle); // gamepad in the world: only the window's buttons
+            }
+            if (_renameFor == null) return;
             RenameInput(ev);
             if (ev.rawType == EventType.MouseUp) _modalPress = false;
             if (_renameFor != null) RenameWindow(ev);
@@ -339,7 +374,7 @@ namespace Portaler
             {
                 try
                 {
-                    if (hold || alt || human != Player.m_localPlayer || ZInput.IsGamepadActive()) return true;
+                    if (hold || alt || human != Player.m_localPlayer) return true;
                     if (!PrivateArea.CheckAccess(__instance.transform.position)) return true; // the game says why
                     var nview = __instance.GetComponent<ZNetView>();
                     if (nview == null || !nview.IsValid()) return true;

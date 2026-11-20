@@ -520,7 +520,7 @@ namespace Portaler
             return player != null && !player.InPlaceMode() && !player.IsTeleporting();
         }
 
-        /// <summary>L = link / remove the link, C = colour, for the portal the player looks at.</summary>
+        /// <summary>L = link / remove the link, C = edit (name, type, colour), for the portal the player looks at.</summary>
         private static void WorldKeys()
         {
             bool link = Input.GetKeyDown(Plugin.LinkKey.Value), color = Input.GetKeyDown(Plugin.ColorKey.Value);
@@ -535,8 +535,7 @@ namespace Portaler
 
             if (color)
             {
-                Activate(tw, true);
-                PortalUI.OpenColorWindow(p);
+                PortalUI.OpenRename(p); // the Edit portal window, right here in the world
                 return;
             }
             var dest = LinkOf(p);
@@ -572,7 +571,7 @@ namespace Portaler
             var sb = new System.Text.StringBuilder();
             if (dest != null) sb.Append("\n<color=#ffbe3c>Leads to: ").Append(dest.DisplayName).Append("</color>");
             sb.Append("\n[<color=yellow><b>").Append(Plugin.LinkKey.Value).Append("</b></color>] ").Append(dest != null ? "Remove link" : "Link");
-            sb.Append("   [<color=yellow><b>").Append(Plugin.ColorKey.Value).Append("</b></color>] Colour");
+            sb.Append("   [<color=yellow><b>").Append(Plugin.ColorKey.Value).Append("</b></color>] Edit portal");
             return sb.ToString();
         }
 

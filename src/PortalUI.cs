@@ -46,11 +46,10 @@ namespace Portaler
         public static bool BlocksKeys => SearchFocused || WindowOpen;
 
         /// <summary>A Portaler window (menu, link dialog, colour, category, players) is open over the list.</summary>
-        public static bool WindowOpen => _renameFor != null || _graveOpen || _picker != null || _playersOpen || _menuFor != null || _linkOpen || _colorFor != null;
+        public static bool WindowOpen => _renameFor != null || _graveOpen || _playersOpen || _menuFor != null || _linkOpen;
 
-        // category filter (0 = all) and category window
+        // category filter (0 = all)
         private static int _catFilter;
-        private static PortalInfo _picker;
         private static Texture2D[] _catIcons;
 
         // drag and drop of favorites
@@ -95,7 +94,6 @@ namespace Portaler
             _scroll = Vector2.zero;
             _search = "";
             _wantUnfocus = true;
-            _picker = null;
             _drag = null;
             _dragGroup = null;
             _playersOpen = false;
@@ -114,7 +112,6 @@ namespace Portaler
                 MouseOverList = false;
                 _pressedInList = false;
                 HoveredPortal = null;
-                _picker = null;
                 _drag = null;
                 _dragGroup = null;
                 _playersOpen = false;
@@ -133,7 +130,7 @@ namespace Portaler
             // moving or clicking the mouse ends arrow-key control
             if (ev.type == EventType.MouseMove || ev.type == EventType.MouseDown) PortalPad.KeyNav = false;
             // gamepad / arrow keys: once per frame, before anything is drawn
-            if (ev.type == EventType.Layout && !TextInput.IsVisible()) PadStep(ref travel, ref toggle);
+            if (ev.type == EventType.Layout && !PortalPad.RealTextInput()) PadStep(ref travel, ref toggle);
             MouseOverList = _rect.Contains(ev.mousePosition);
             if (ev.type == EventType.MouseDown && MouseOverList) _pressedInList = true;
             if (ev.rawType == EventType.MouseUp) _pressedInList = false;
@@ -143,11 +140,9 @@ namespace Portaler
             if (WindowOpen && ev.type == EventType.MouseDown) _modalPress = true;
             if (_renameFor != null) RenameInput(ev);
             else if (_graveOpen) GraveInput(ev);
-            else if (_picker != null) PickerInput(ev);
             else if (_playersOpen) PlayersInput(ev);
             else if (_menuFor != null) MenuInput(ev);
             else if (_linkOpen) LinkInput(ev);
-            else if (_colorFor != null) ColorInput(ev);
             else if (_pickEnd >= 0 && ev.type == EventType.KeyDown && ev.keyCode == KeyCode.Escape && !SearchFocused) { _pickEnd = -1; _linkOpen = true; ev.Use(); }
             // the map handled its click before this mouse-up reached us: from now on it may react again
             if (ev.rawType == EventType.MouseUp) _modalPress = false;
@@ -174,9 +169,9 @@ namespace Portaler
             if (!typing && !SearchFocused && !WindowOpen && ev.type == EventType.KeyDown && keyTarget != null)
             {
                 if (ev.keyCode == Plugin.RenameKey.Value) { OpenRename(keyTarget); ev.Use(); }
-                else if (ev.keyCode == Plugin.CategoryKey.Value) { _picker = keyTarget; ev.Use(); }
+                else if (ev.keyCode == Plugin.CategoryKey.Value) { OpenRename(keyTarget); ev.Use(); }
                 else if (ev.keyCode == Plugin.LinkKey.Value) { LinkFromHere(keyTarget); ev.Use(); }
-                else if (ev.keyCode == Plugin.ColorKey.Value) { OpenColorWindow(keyTarget); ev.Use(); }
+                else if (ev.keyCode == Plugin.ColorKey.Value) { OpenRename(keyTarget); ev.Use(); }
             }
             if (ev.type == EventType.Repaint) _hovered = null;
 
@@ -253,12 +248,10 @@ namespace Portaler
                 HoveredPortal = WindowOpen || _drag != null || _dragGroup != null ? null
                               : PortalPad.Active ? _padPortal
                               : MouseOverList ? _hovered : null;
-                if (_graveOpen || _picker != null || _playersOpen || _linkOpen || _colorFor != null) DimScreen();
-                if (_picker != null) DrawPicker(ev);
+                if (_graveOpen || _playersOpen || _linkOpen) DimScreen();
                 if (_playersOpen) DrawPlayers(ev);
                 if (_menuFor != null) DrawMenu(ev);
                 if (_linkOpen) DrawLink(ev);
-                if (_colorFor != null) DrawColor(ev);
                 if (_graveOpen) DrawGrave(ev);
                 if (PortalPad.Active && WindowOpen && _padWin > 0 && _padWinFocus < PadTargets.Count) DrawFocusFrame(PadTargets[_padWinFocus]);
             }
@@ -946,7 +939,7 @@ namespace Portaler
         private static readonly List<MenuItem> MenuItems = new List<MenuItem>();
 
         // link dialog: both ends, direction and colour; picking replaces one end and comes back to the dialog
-        private static PortalInfo _linkFrom, _linkTo, _colorFor;
+        private static PortalInfo _linkFrom, _linkTo;
         private static bool _linkOpen, _linkBoth = true;
         private static int _linkColor;
         private static int _pickEnd = -1; // -1 = not picking, 0 = choosing "From", 1 = choosing "To"
@@ -960,7 +953,7 @@ namespace Portaler
 
         private static void CloseWindows()
         {
-            _renameFor = null; _graveOpen = false; _menuFor = null; _linkOpen = false; _linkFrom = null; _linkTo = null; _colorFor = null; _pickEnd = -1; _picker = null; _playersOpen = false;
+            _renameFor = null; _graveOpen = false; _menuFor = null; _linkOpen = false; _linkFrom = null; _linkTo = null; _pickEnd = -1; _playersOpen = false;
         }
 
         private static PortalInfo SourcePortal => PortalClient.Get(PortalClient.SourceId);
@@ -1003,13 +996,8 @@ namespace Portaler
             _linkOpen = true;
         }
 
-        public static void OpenColorWindow(PortalInfo p)
-        {
-            if (p == null) return;
-            CloseWindows();
-            _colorFor = p;
-            InitPicker(p);
-        }
+        /// <summary>C in the world: the Edit portal window (colour, type and name).</summary>
+        public static void OpenColorWindow(PortalInfo p) => OpenRename(p);
 
         /// <summary>Right click on a row or a map pin. pos = screen position (GUI coordinates, y down).</summary>
         public static void OpenMenu(PortalInfo p, Vector2 pos)
@@ -1022,19 +1010,17 @@ namespace Portaler
             var src = SourcePortal;
             if (src == null || p.Id != src.Id)
                 MenuItems.Add(new MenuItem { Text = "Travel here", Act = () => PortalClient.TeleportTo(p) });
+            MenuItems.Add(new MenuItem { Text = "Edit portal...", Key = Plugin.RenameKey.Value.ToString(), Act = () => OpenRename(p) });
             MenuItems.Add(new MenuItem { Text = "Link...", Key = Plugin.LinkKey.Value.ToString(), Act = () => LinkFromHere(p) });
             var dest = PortalClient.LinkOf(p);
             if (dest != null)
                 MenuItems.Add(new MenuItem { Text = "Remove link", Dest = dest.DisplayName, Act = () => PortalClient.SetLink(p, null) });
-            MenuItems.Add(new MenuItem { Text = "Colour...", Key = Plugin.ColorKey.Value.ToString(), Act = () => OpenColorWindow(p) });
             var fav = PortalClient.GetFav(p);
             MenuItems.Add(new MenuItem
             {
                 Text = fav == PortalClient.FavState.None ? "Favorite: mine" : fav == PortalClient.FavState.Personal ? "Favorite: shared" : "Remove favorite",
                 Act = () => PortalClient.ToggleFavorite(p),
             });
-            MenuItems.Add(new MenuItem { Text = "Category...", Key = Plugin.CategoryKey.Value.ToString(), Act = () => _picker = p });
-            MenuItems.Add(new MenuItem { Text = "Edit...", Key = Plugin.RenameKey.Value.ToString(), Act = () => OpenRename(p) });
         }
 
         private const float MenuW = 320f, MenuItemH = 34f, MenuGap = 4f, MenuTop = 64f;
@@ -1259,75 +1245,14 @@ namespace Portaler
             GUI.color = old;
         }
 
-        // ----- colour window -----
-
-        private const float PickTop = 62f + 3f * (74f + 8f) + 8f;   // top of the custom picker inside the window
-        private const float PickSize = 150f;
-        private static Rect ColorRect() => Centered(480f, PickTop + 26f + PickSize + 18f);
-
-        private static Rect ColorTile(Rect cr, int i)
-        {
-            float tw = (cr.width - 24f - 16f) / 3f;
-            return new Rect(cr.x + 12f + (i % 3) * (tw + 8f), cr.y + 62f + (i / 3) * (74f + 8f), tw, 74f);
-        }
-
+        // ----- colour picker state (used by the "Own..." window of Edit portal) -----
         // custom colour picker: saturation/brightness square + hue bar
         private static float _pickH = 0.08f, _pickS = 0.8f, _pickV = 1f;
         private static int _pickDrag;            // 0 none, 1 square, 2 hue bar
         private static Texture2D _hueTex, _svTex;
         private static float _svTexHue = -1f;
 
-        private static Rect SvRect(Rect cr) => new Rect(cr.x + 16f, cr.y + PickTop + 26f, PickSize, PickSize);
-        private static Rect HueRect(Rect cr) => new Rect(cr.x + 16f + PickSize + 12f, cr.y + PickTop + 26f, 24f, PickSize);
-        private static Rect PreviewRect(Rect cr) => new Rect(cr.x + 16f + PickSize + 52f, cr.y + PickTop + 26f, 70f, 70f);
-        private static Rect UseRect(Rect cr) => new Rect(cr.x + 16f + PickSize + 52f, cr.y + PickTop + 26f + PickSize - 40f, cr.xMax - 16f - (cr.x + 16f + PickSize + 52f), 40f);
         private static Color PickColor => Color.HSVToRGB(_pickH, _pickS, _pickV);
-
-        /// <summary>Called when the colour window opens: start the picker at the portal's current colour.</summary>
-        private static void InitPicker(PortalInfo p)
-        {
-            _pickDrag = 0;
-            if (p != null && PortalColors.Has(p.Color)) Color.RGBToHSV(PortalColors.Get(p.Color), out _pickH, out _pickS, out _pickV);
-            else { _pickH = 0.08f; _pickS = 0.8f; _pickV = 1f; }
-        }
-
-        private static void PickAt(Rect cr, Vector2 mp)
-        {
-            if (_pickDrag == 1)
-            {
-                var r = SvRect(cr);
-                _pickS = Mathf.Clamp01((mp.x - r.x) / r.width);
-                _pickV = Mathf.Clamp01(1f - (mp.y - r.y) / r.height);
-            }
-            else if (_pickDrag == 2)
-            {
-                var r = HueRect(cr);
-                _pickH = Mathf.Clamp01((mp.y - r.y) / r.height) * 0.999f;
-            }
-        }
-
-        private static void ColorInput(Event ev)
-        {
-            var cr = ColorRect();
-            if (ev.type == EventType.KeyDown && (ev.keyCode == KeyCode.Escape || ev.keyCode == Plugin.ColorKey.Value)) { _colorFor = null; ev.Use(); return; }
-            if (ev.type == EventType.KeyDown && (ev.keyCode == KeyCode.Return || ev.keyCode == KeyCode.KeypadEnter) && !PortalPad.KeyNav)
-            { PortalClient.SetColor(_colorFor, PortalColors.FromColor(PickColor)); _colorFor = null; ev.Use(); return; }
-            var mp = ev.mousePosition;
-            if (ev.type == EventType.MouseDown)
-            {
-                ev.Use();
-                if (SvRect(cr).Contains(mp)) { _pickDrag = 1; PickAt(cr, mp); return; }
-                if (HueRect(cr).Contains(mp)) { _pickDrag = 2; PickAt(cr, mp); return; }
-                if (UseRect(cr).Contains(mp)) { PortalClient.SetColor(_colorFor, PortalColors.FromColor(PickColor)); _colorFor = null; return; }
-                for (int i = 0; i < PortalColors.Count; i++)
-                    if (ColorTile(cr, i).Contains(mp)) { PortalClient.SetColor(_colorFor, i); _colorFor = null; return; }
-                if (!cr.Contains(mp)) _colorFor = null; // a click outside closes it
-                return;
-            }
-            if (ev.type == EventType.MouseDrag && _pickDrag != 0) { PickAt(cr, mp); ev.Use(); return; }
-            if (ev.rawType == EventType.MouseUp) _pickDrag = 0;
-            if (ev.isMouse || ev.type == EventType.ScrollWheel) ev.Use();
-        }
 
         private static void EnsurePickerTextures()
         {
@@ -1346,56 +1271,6 @@ namespace Portaler
                         _svTex.SetPixel(x, y, Color.HSVToRGB(_pickH, x / 31f, y / 31f));
                 _svTex.Apply();
             }
-        }
-
-        private static void DrawColor(Event ev)
-        {
-            var cr = ColorRect();
-            DrawBoard(cr, "picker", 0);
-            _pickerTitle.Draw(new Rect(cr.x + 16f, cr.y + 10f, cr.width - 32f, 26f), Tmp($"Colour for \"{_colorFor.DisplayName}\""), false, false, false, false);
-            _placeholder.Draw(new Rect(cr.x + 16f, cr.y + 34f, cr.width - 32f, 22f), Tmp("Same for everyone on the server. Esc closes."), false, false, false, false);
-            for (int i = 0; i < PortalColors.Count; i++)
-            {
-                var t = ColorTile(cr, i);
-                bool on = _colorFor.Color == i;
-                DrawBoard(t, on ? "sort-on" : t.Contains(Pointer(ev)) ? "sort-hover" : "sort", i);
-                DrawSwatch(new Rect(t.center.x - 15f, t.y + 10f, 30f, 30f), i, false, false);
-                _sortText.Draw(new Rect(t.x, t.y + 44f, t.width, 26f), Tmp(PortalColors.Names[i]), false, false, false, false);
-            }
-
-            // custom colour
-            EnsurePickerTextures();
-            _placeholder.Draw(new Rect(cr.x + 16f, cr.y + PickTop, cr.width - 32f, 22f), Tmp(PortalPad.PadInput ? "Or pick your own colour (right stick, LB / RB):" : "Or pick your own colour:"), false, false, false, false);
-            var sv = SvRect(cr); var hue = HueRect(cr);
-            var old = GUI.color;
-            GUI.color = new Color32(30, 20, 14, 255);
-            GUI.DrawTexture(new Rect(sv.x - 2f, sv.y - 2f, sv.width + 4f, sv.height + 4f), Texture2D.whiteTexture);
-            GUI.DrawTexture(new Rect(hue.x - 2f, hue.y - 2f, hue.width + 4f, hue.height + 4f), Texture2D.whiteTexture);
-            GUI.color = Color.white;
-            GUI.DrawTexture(sv, _svTex);
-            GUI.DrawTexture(hue, _hueTex);
-            // markers
-            var m = new Vector2(sv.x + _pickS * sv.width, sv.y + (1f - _pickV) * sv.height);
-            GUI.color = _pickV > 0.5f ? Color.black : Color.white;
-            GUI.DrawTexture(new Rect(m.x - 7f, m.y - 7f, 14f, 14f), Art.RingSprite().texture);
-            GUI.color = Color.white;
-            float hy = hue.y + _pickH / 0.999f * hue.height;
-            GUI.DrawTexture(new Rect(hue.x - 4f, hy - 1.5f, hue.width + 8f, 3f), Texture2D.whiteTexture);
-            GUI.color = Color.black;
-            GUI.DrawTexture(new Rect(hue.x - 4f, hy - 2.5f, hue.width + 8f, 1f), Texture2D.whiteTexture);
-            GUI.DrawTexture(new Rect(hue.x - 4f, hy + 1.5f, hue.width + 8f, 1f), Texture2D.whiteTexture);
-            // preview + use button
-            var pv = PreviewRect(cr);
-            GUI.color = new Color32(30, 20, 14, 255);
-            GUI.DrawTexture(new Rect(pv.x - 2f, pv.y - 2f, pv.width + 4f, pv.height + 4f), _disc);
-            GUI.color = PickColor;
-            GUI.DrawTexture(pv, _disc);
-            GUI.color = old;
-            bool custom = PortalColors.IsCustom(_colorFor.Color);
-            _placeholder.Draw(new Rect(pv.xMax + 10f, pv.y + 8f, cr.xMax - pv.xMax - 26f, 22f), Tmp(custom ? "Current: custom" : "Current: " + PortalColors.Name(_colorFor.Color)), false, false, false, false);
-            var use = UseRect(cr);
-            DrawBoard(use, use.Contains(Pointer(ev)) ? "sort-hover" : "sort-on", 20);
-            _sortText.Draw(use, Tmp("Use this colour"), false, false, false, false);
         }
 
         // ---------- category filter ----------
@@ -1420,65 +1295,6 @@ namespace Portaler
                 }
             }
             GUILayout.EndHorizontal();
-        }
-
-        // ---------- category window (key T over a name) ----------
-
-        private static Rect PickerRect()
-        {
-            float tileH = 84f;
-            float h = 70f + 3 * (tileH + 8f) + 10f;
-            return Centered(480f, h);
-        }
-
-        private static Rect PickerTile(Rect pr, int i)
-        {
-            // 3 x 3 tiles: categories 1..8, then "None" last
-            int slot = i == 0 ? 8 : i - 1;
-            float tw = (pr.width - 24f - 2 * 8f) / 3f, th = 84f;
-            return new Rect(pr.x + 12f + (slot % 3) * (tw + 8f), pr.y + 62f + (slot / 3) * (th + 8f), tw, th);
-        }
-
-        private static void PickerInput(Event ev)
-        {
-            var pr = PickerRect();
-            if (ev.type == EventType.KeyDown && (ev.keyCode == KeyCode.Escape || ev.keyCode == Plugin.CategoryKey.Value))
-            {
-                _picker = null; ev.Use(); return;
-            }
-            if (ev.type == EventType.MouseDown)
-            {
-                for (int c = 0; c < Categories.Count; c++)
-                {
-                    if (PickerTile(pr, c).Contains(ev.mousePosition))
-                    {
-                        PortalClient.SetCategory(_picker, c);
-                        _picker = null; ev.Use(); return;
-                    }
-                }
-                if (!pr.Contains(ev.mousePosition)) _picker = null; // click outside closes it
-                ev.Use();
-                return;
-            }
-            if (ev.isMouse || ev.type == EventType.ScrollWheel) ev.Use();
-        }
-
-        private static void DrawPicker(Event ev)
-        {
-            var pr = PickerRect();
-            DrawBoard(pr, "picker", 0);
-            _pickerTitle.Draw(new Rect(pr.x + 16f, pr.y + 10f, pr.width - 32f, 26f), Tmp($"Category for \"{_picker.DisplayName}\""), false, false, false, false);
-            _placeholder.Draw(new Rect(pr.x + 16f, pr.y + 34f, pr.width - 32f, 22f), Tmp("Same for everyone on the server. Esc closes."), false, false, false, false);
-            for (int c = 0; c < Categories.Count; c++)
-            {
-                var t = PickerTile(pr, c);
-                bool on = _picker.Category == c;
-                bool hover = t.Contains(Pointer(ev));
-                DrawBoard(t, on ? "sort-on" : hover ? "sort-hover" : "sort", c);
-                if (c > 0) GUI.DrawTexture(new Rect(t.center.x - 17f, t.y + 10f, 34f, 34f), _catIcons[c], ScaleMode.ScaleToFit, true);
-                else _pickerX.Draw(new Rect(t.x, t.y + 6f, t.width, 40f), Tmp("x"), false, false, false, false);
-                _sortText.Draw(new Rect(t.x, t.y + 48f, t.width, 28f), Tmp(Categories.Names[c]), false, false, false, false);
-            }
         }
 
         private static GUIStyle _pickerTitle, _pickerX;

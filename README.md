@@ -62,7 +62,7 @@ Every feature says what is **🌐 shared** (the same for everybody on the server
 ![Favorites with drag handles, gold (shared) and silver (personal) stars](https://raw.githubusercontent.com/nfp007/portaler/main/docs/f-favorites.jpg)
 
 **4. Categories & filter**
-- Hover a name and press **T** to choose a category: Base, Mine, Farm, Trader, Boss, Danger, Dungeon or Explore. It can also be set right in the rename window (**E**).
+- Choose a category in the **Edit portal** window (**E**, **T** or right click → Edit portal): Base, Mine, Farm, Trader, Boss, Danger, Dungeon or Explore.
 - The icon shows in the list and inside the portal's ring on the map.
 - One click on an icon in the **Show:** row lists only that category. Click it again (or **All**) to see everything.
 - 🌐 Shared: the category of each portal (anyone can change it).
@@ -114,10 +114,11 @@ Every feature says what is **🌐 shared** (the same for everybody on the server
 **10. Automatic names & the Edit portal window**
 - New portals are named after their biome plus a number, for example `BF-007` or `MO-012`. Numbers keep counting up per biome and are never reused.
 - Portals you name yourself, and existing portals, keep their names.
-- Press **E** on a name in the list, on a map pin, or on a portal in the world: one compact window edits the portal's **name** (up to 25 characters), **type** (category) and **colour**.
+- Press **E** on a name in the list, on a map pin, or on a portal in the world, or right click → **Edit portal...**: one compact window edits the portal's **name** (up to 25 characters), **type** (category) and **colour**. **T** and **C** open the same window.
 - **Own...** next to Vanilla opens a small picker for any colour you like; **Use** brings it back to the edit window.
 - Nothing is written until **Save** (Enter): name, type and colour are saved together. **Cancel** (Esc) keeps everything as it was.
-- In the world, wards still decide who may edit a portal, as in the game. With a gamepad the game's own text box is used for the name, so the on-screen keyboard still works.
+- In the world, wards still decide who may edit a portal, as in the game.
+- With a gamepad the D-pad moves between name, types, colours and Save / Cancel; **A** on the name opens the game's own text box with the on-screen keyboard.
 - 🌐 Shared: portal names, types and colours (anyone can change them).
 
 ![The Edit portal window and the own-colour picker](https://raw.githubusercontent.com/nfp007/portaler/main/docs/f-edit.jpg)
@@ -139,7 +140,7 @@ Every feature says what is **🌐 shared** (the same for everybody on the server
 - Looking at a portal in the world: **L** links it (the map opens to pick the destination), or removes its link (press L twice).
 - Linked portals show the destination's name floating above them in gold Viking letters (within 20 m), and "Leads to: …" in their hover text. In the list: "Mine → BASE Plains".
 - From any other portal you can still travel *to* a linked portal as usual. If a destination is destroyed, the link is dropped.
-- **Colours**: any portal can glow in one of 8 colours (Ice, Green, Gold, Red, Purple, Teal, White, Pink), in any colour of your own from the picker (drag in the square and the hue bar, then **Use this colour** or Enter), or keep the vanilla look. Press **C** (on a name, a pin, or a portal in the world) or right click → Colour. The colour shows on the portal's runes, in the fire around it and as a darker shade in the swirl in the middle, as a ring around its map pin and as a mark on its row.
+- **Colours**: any portal can glow in one of 8 colours (Ice, Green, Gold, Red, Purple, Teal, White, Pink), in any colour of your own from the picker (**Own...**: drag in the square and the hue bar, then **Use**), or keep the vanilla look. Choose it in the **Edit portal** window (**E** or **C** on a name, a pin, or a portal in the world, or right click → Edit portal). The colour shows on the portal's runes, in the fire around it and as a darker shade in the swirl in the middle, as a ring around its map pin and as a mark on its row.
 - Portals with the same name never link each other.
 - 🌐 Shared: links and colours (anyone can change them).
 
@@ -157,7 +158,7 @@ Every feature says what is **🌐 shared** (the same for everybody on the server
 
 **15. Gamepad support**
 - Play with a controller (or on Steam Deck): move through the list with the D-pad, **A** travels, **X** sets a favorite, **Y** opens the portal menu, **B** closes. The map previews the portal you are on, just like hovering with the mouse.
-- Every Portaler window (menu, colour, category, link, players) works with the D-pad and **A** / **B**. See Controls for all buttons.
+- Every Portaler window (menu, Edit portal, link, players, grave) works with the D-pad and **A** / **B**. See Controls for all buttons.
 - The search box and the **Show:** category filter still need a mouse or keyboard.
 - 👤 Personal: setting `[Controls] Gamepad` (on by default).
 
@@ -168,7 +169,7 @@ Every feature says what is **🌐 shared** (the same for everybody on the server
 - 👤 Personal: setting `[List] GraveDialog` (on by default).
 
 **17. Arrow keys**
-- Arrow keys up / down move through the list, left / right jump between groups, **Enter** travels. The windows (menu, colour, category, link, players, grave) work the same way.
+- Arrow keys up / down move through the list, left / right jump between groups, **Enter** travels. The windows (menu, link, players, grave) work the same way; in Edit portal the keyboard types the name.
 - Moving the mouse switches back to mouse control.
 - 👤 Personal.
 
@@ -182,12 +183,10 @@ All shared data is stored on the server, next to the world save, and survives re
 | Open the portal list | Walk into any portal |
 | Travel | Left click a name in the list, or a portal pin on the map |
 | Favorite: mine / shared / off | Click the star of a name (or right click → Favorite) |
-| Portal menu | Right click a name or a portal pin: travel, link, remove link, colour, favorite, category, rename |
+| Portal menu | Right click a name or a portal pin: travel, edit portal, link, remove link, favorite |
 | Link a portal | Standing in a portal: hover a name or pin and press **L**. Looking at a portal in the world: **L** (press twice to remove a link) |
-| Portal colour | Hover a name or pin, or look at a portal, and press **C** |
 | See a portal on the map | Hover its name for a moment |
 | Edit a portal (name, type, colour) | Hover its name or pin (or look at the portal) and press **E**; Enter saves all, Esc cancels |
-| Set a category | Hover its name and press **T**, click a category (Esc closes) |
 | Show one category | Click its icon in the **Show:** row; click again or **All** for everything |
 | Reorder favorites | Drag a favorite by its handle (the three lines on the left) |
 | Search | Click the search box, type part of a name; Esc or x clears it |
@@ -214,7 +213,7 @@ All shared data is stored on the server, next to the world save, and survives re
 | Change sorting (Biome / Name / Distance) | **LB** / **RB** |
 | Close the list | **B** |
 | In a window (menu, colour, category, link, players) | D-pad chooses, **A** presses, **B** goes back |
-| Own colour in the colour window | Right stick = saturation / brightness, **LB** / **RB** = hue, then **Use this colour** |
+| Own colour (Edit portal → Own...) | Right stick = saturation / brightness, **LB** / **RB** = hue, then **Use** |
 | Pan / zoom the map | Left stick / triggers, as in the game |
 
 </details>
@@ -227,9 +226,9 @@ Config file: `BepInEx/config/nfp007.Portaler.cfg` (created on first start). `[Se
 | Setting | Default | What it does |
 |---|---|---|
 | `[Controls] RenameKey` | `E` | Key to rename the hovered portal. Any Unity key name, e.g. `R`, `F2`. |
-| `[Controls] CategoryKey` | `T` | Key to choose the hovered portal's category. |
+| `[Controls] CategoryKey` | `T` | Also opens the Edit portal window for the hovered portal. |
 | `[Controls] LinkKey` | `L` | Link the portal you stand in to the hovered name or pin; in the world: link or unlink the portal you look at. |
-| `[Controls] ColorKey` | `C` | Choose the colour of the hovered name, pin, or the portal you look at. |
+| `[Controls] ColorKey` | `C` | Opens the Edit portal window for the hovered name, pin, or the portal you look at. |
 | `[List] GraveDialog` | `true` | After a death, the first portal you walk into offers the portal nearest your grave and your last trip. |
 | `[Controls] Gamepad` | `true` | Use the portal list with a gamepad (see Controls). `false` = the gamepad works on the map as in the vanilla game. |
 | `[World] FloatingNames` | `true` | Show the destination's name above linked portals near you. |

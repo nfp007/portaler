@@ -11,13 +11,13 @@ namespace Portaler
     internal static class PortalPad
     {
         /// <summary>The player uses a gamepad right now (Valheim's own switch: moving the mouse turns it off).</summary>
-        public static bool PadInput => Plugin.Gamepad.Value && PortalClient.Active && ZInput.IsGamepadActive();
+        public static bool PadInput => Plugin.Gamepad.Value && (PortalClient.Active || PortalUI.RenameOpen) && ZInput.IsGamepadActive();
 
         /// <summary>The list is driven by the arrow keys (from the first arrow press until the mouse moves).</summary>
         public static bool KeyNav;
 
         /// <summary>Gamepad or arrow keys: the list shows a chosen row instead of following the mouse.</summary>
-        public static bool Active => PortalClient.Active && (PadInput || KeyNav);
+        public static bool Active => (PortalClient.Active || PortalUI.RenameOpen) && (PadInput || KeyNav);
 
         // pressed since the list last looked (cleared by Clear)
         public static bool Up, Down, Left, Right, A, B, X, Y, LB, RB;
@@ -32,9 +32,10 @@ namespace Portaler
 
         public static void Tick()
         {
-            if (!PortalClient.Active) KeyNav = false;
-            if (!PortalClient.Active || TextInput.IsVisible() || PortalUI.SearchFocused) { Clear(); Stick = Vector2.zero; Tab = 0; return; }
+            bool open = PortalClient.Active || PortalUI.RenameOpen;
+            if (!open || PortalUI.RenameOpen) KeyNav = false; // in the Edit window the keyboard types
             bool pad = PadInput;
+            if (!open || RealTextInput() || PortalUI.SearchFocused || (PortalUI.RenameOpen && !pad)) { Clear(); Stick = Vector2.zero; Tab = 0; return; }
             _reading = true;
             try
             {
@@ -79,12 +80,23 @@ namespace Portaler
             return false;
         }
 
+        private static readonly AccessTools.FieldRef<TextInput, GameObject> Panel = AccessTools.FieldRefAccess<TextInput, GameObject>("m_panel");
+
+        /// <summary>The game's own text box is really on screen (TextInput.IsVisible also reports Portaler's Edit window).</summary>
+        public static bool RealTextInput()
+        {
+            var ti = TextInput.instance;
+            if (ti == null) return false;
+            var panel = Panel(ti);
+            return panel != null && panel.activeSelf;
+        }
+
         public static void Clear() { Up = Down = Left = Right = A = B = X = Y = LB = RB = false; }
 
         /// <summary>Buttons the open list uses; the rest of the game does not see them meanwhile.</summary>
         private static bool Owns(string name)
         {
-            if (_reading || !PadInput || TextInput.IsVisible()) return false;
+            if (_reading || !PadInput || RealTextInput()) return false;
             switch (name)
             {
                 case "JoyDPadUp": case "JoyDPadDown": case "JoyDPadLeft": case "JoyDPadRight":

@@ -26,7 +26,7 @@ namespace Portaler
         private static Vector2 Pointer(Event ev) => PortalPad.Active ? _padPoint : ev.mousePosition;
 
         /// <summary>Which window gets the input (same order as in Draw).</summary>
-        private static int WindowKind => _graveOpen ? 6 : _picker != null ? 1 : _playersOpen ? 2 : _menuFor != null ? 3 : _linkOpen ? 4 : _colorFor != null ? 5 : 0;
+        private static int WindowKind => _renameFor != null ? (_ownOpen ? 8 : 7) : _graveOpen ? 6 : _playersOpen ? 2 : _menuFor != null ? 3 : _linkOpen ? 4 : 0;
 
         /// <summary>Called once per frame (Layout) before anything is drawn.</summary>
         private static void PadStep(ref PortalInfo travel, ref PortalInfo toggle)
@@ -88,13 +88,6 @@ namespace Portaler
             t.Clear();
             switch (kind)
             {
-                case 1:
-                {
-                    var pr = PickerRect();
-                    for (int c = 1; c < Categories.Count; c++) t.Add(PickerTile(pr, c));
-                    t.Add(PickerTile(pr, 0)); // "None" is the last tile
-                    return _picker.Category > 0 ? _picker.Category - 1 : t.Count - 1;
-                }
                 case 2:
                 {
                     var known = _model != null ? _model.Known : PortalClient.KnownPlayers();
@@ -131,13 +124,20 @@ namespace Portaler
                     t.Add(GraveClose(gr));
                     return 0;
                 }
-                case 5:
+                case 7:
                 {
-                    var cr = ColorRect();
-                    for (int i = 0; i < PortalColors.Count; i++) t.Add(ColorTile(cr, i));
-                    t.Add(UseRect(cr));
-                    int c = _colorFor.Color;
-                    return PortalColors.IsCustom(c) || c < 0 || c >= PortalColors.Count ? t.Count - 1 : c;
+                    var rr = RenameRect();
+                    t.Add(RenameFieldRect(rr));
+                    for (int c = 0; c < Categories.Count; c++) t.Add(RenameTile(rr, c));
+                    for (int sl = 0; sl < ColorSlots; sl++) t.Add(RenameSwatchCell(rr, sl));
+                    t.Add(RenameButton(rr, 0)); t.Add(RenameButton(rr, 1));
+                    return t.Count - 2; // Save
+                }
+                case 8:
+                {
+                    var or = OwnRect();
+                    t.Add(OwnButton(or, 0)); t.Add(OwnButton(or, 1));
+                    return 0; // Use
                 }
             }
             return 0;
@@ -151,7 +151,7 @@ namespace Portaler
             _padWinFocus = Mathf.Clamp(_padWinFocus, 0, PadTargets.Count - 1);
 
             bool stickColour = false;
-            if (kind == 5)
+            if (kind == 8)
             {
                 // own colour: right stick = saturation (left/right) and brightness (up/down), LB/RB = hue
                 var st = PortalPad.Stick;
@@ -162,7 +162,7 @@ namespace Portaler
                     _pickS = Mathf.Clamp01(_pickS + st.x * dt * 0.8f);
                     _pickV = Mathf.Clamp01(_pickV - st.y * dt * 0.8f);
                     _pickH = Mathf.Repeat(_pickH + PortalPad.Tab * dt * 0.2f, 0.999f);
-                    _padWinFocus = PadTargets.Count - 1; // "Use this colour"
+                    _padWinFocus = 0; // "Use"
                 }
             }
             if (!stickColour)
@@ -180,11 +180,10 @@ namespace Portaler
             if (fake == null) return;
             switch (kind)
             {
-                case 1: PickerInput(fake); break;
                 case 2: PlayersInput(fake); break;
                 case 3: MenuInput(fake); break;
                 case 4: LinkInput(fake); break;
-                case 5: ColorInput(fake); break;
+                case 7: case 8: RenameInput(fake); break;
                 case 6: GraveInput(fake); break;
             }
             _modalPress = false; // no mouse-up will follow
