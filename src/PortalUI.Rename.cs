@@ -22,6 +22,17 @@ namespace Portaler
 
         public static bool RenameOpen => _renameFor != null;
 
+        /// <summary>
+        /// Colour a portal shows in the world: while its Edit portal window is open, the colour being chosen
+        /// (also live while dragging in "Own..."); Save keeps it, Cancel goes back to the stored one.
+        /// </summary>
+        public static int ShownColor(PortalInfo p)
+        {
+            if (p == null) return 0;
+            if (_renameFor == null || _renameFor.Id != p.Id) return p.Color;
+            return _ownOpen ? PortalColors.FromColor(PickColor) : _renameColor;
+        }
+
         /// <summary>Open the edit window (or the game's text box when playing with a gamepad).</summary>
         public static void OpenRename(PortalInfo p)
         {

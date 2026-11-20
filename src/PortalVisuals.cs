@@ -58,7 +58,8 @@ namespace Portaler
         public static void Tick()
         {
             if (Time.time < _nextApply) return;
-            _nextApply = Time.time + 0.25f;
+            // faster while the Edit portal window previews a colour (dragging in the picker)
+            _nextApply = Time.time + (PortalUI.RenameOpen ? 0.05f : 0.25f);
             for (int i = Loaded.Count - 1; i >= 0; i--)
             {
                 var tw = Loaded[i];
@@ -66,7 +67,7 @@ namespace Portaler
                 var nview = tw.GetComponent<ZNetView>();
                 if (nview == null || !nview.IsValid()) continue;
                 var p = PortalClient.Get(nview.GetZDO().m_uid);
-                Apply(tw, p != null ? p.Color : 0);
+                Apply(tw, p != null ? PortalUI.ShownColor(p) : 0);
             }
             if (Originals.Count > Loaded.Count + 16)
             {

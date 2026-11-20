@@ -6,6 +6,7 @@
 - **Gamepad in Edit portal**: the D-pad moves between name, types, colours and Save / Cancel, **A** presses, **B** cancels. **A** on the name opens the game's text box with the on-screen keyboard. "Own..." works with the right stick and LB / RB.
 - The keys shown in the right-click menu (**E** = Edit portal, **L** = Link) now work while the menu is open, from a list row and from a map pin.
 - Saving or closing the Edit portal window on a portal in the world no longer makes your character attack.
+- **Live colour preview**: while the Edit portal window is open, the portal in the world already shows the colour you pick (also while dragging in Own...). **Save** (Enter) keeps it, **Cancel** (Esc) puts the old colour back.
 - Only the client changes; the server does not need to be updated.
 
 ## 2.0.7
