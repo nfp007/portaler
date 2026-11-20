@@ -108,12 +108,12 @@ namespace Portaler
                 {
                     if (f.Ps == null) continue;
                     float a = f.Amount;
-                    var main = f.Ps.main; main.startColor = vanilla ? f.Start : Recolor(f.Start, c, a, f.Mix);
-                    var life = f.Ps.colorOverLifetime; life.color = vanilla ? f.Life : Recolor(f.Life, c, a, f.Mix);
-                    var speed = f.Ps.colorBySpeed; speed.color = vanilla ? f.Speed : Recolor(f.Speed, c, a, f.Mix);
+                    var main = f.Ps.main; main.startColor = vanilla ? Copy(f.Start) : Recolor(f.Start, c, a, f.Mix);
+                    var life = f.Ps.colorOverLifetime; life.color = vanilla ? Copy(f.Life) : Recolor(f.Life, c, a, f.Mix);
+                    var speed = f.Ps.colorBySpeed; speed.color = vanilla ? Copy(f.Speed) : Recolor(f.Speed, c, a, f.Mix);
                     var cd = f.Ps.customData;
-                    if (f.HasCustom1) cd.SetColor(ParticleSystemCustomData.Custom1, vanilla ? f.Custom1 : Recolor(f.Custom1, c, a, f.Mix));
-                    if (f.HasCustom2) cd.SetColor(ParticleSystemCustomData.Custom2, vanilla ? f.Custom2 : Recolor(f.Custom2, c, a, f.Mix));
+                    if (f.HasCustom1) cd.SetColor(ParticleSystemCustomData.Custom1, vanilla ? Copy(f.Custom1) : Recolor(f.Custom1, c, a, f.Mix));
+                    if (f.HasCustom2) cd.SetColor(ParticleSystemCustomData.Custom2, vanilla ? Copy(f.Custom2) : Recolor(f.Custom2, c, a, f.Mix));
                 }
                 // the light inside the ring: a hint of the colour, like the glow
                 if (o.Light != null && CenterTint > 0f) o.Light.color = vanilla ? o.LightColor : Color.Lerp(o.LightColor, Recolor(o.LightColor, c), CenterTint);
@@ -188,6 +188,30 @@ namespace Portaler
             }
         }
 
+        /// <summary>A copy that shares no Gradient object with the particle system.</summary>
+        private static Gradient Copy(Gradient g)
+        {
+            if (g == null) return null;
+            var n = new Gradient { mode = g.mode };
+            n.SetKeys(g.colorKeys, g.alphaKeys);
+            return n;
+        }
+
+        private static ParticleSystem.MinMaxGradient Copy(ParticleSystem.MinMaxGradient g)
+        {
+            switch (g.mode)
+            {
+                case ParticleSystemGradientMode.Gradient:
+                    return new ParticleSystem.MinMaxGradient(Copy(g.gradient));
+                case ParticleSystemGradientMode.TwoGradients:
+                    return new ParticleSystem.MinMaxGradient(Copy(g.gradientMin), Copy(g.gradientMax));
+                case ParticleSystemGradientMode.RandomColor:
+                    return new ParticleSystem.MinMaxGradient(Copy(g.gradient)) { mode = ParticleSystemGradientMode.RandomColor };
+                default:
+                    return g; // plain colours are values, nothing shared
+            }
+        }
+
         private static readonly HashSet<string> Dumped = new HashSet<string>();
 
         private static Orig Capture(TeleportWorld tw)
@@ -212,14 +236,15 @@ namespace Portaler
                     var cd = ps.customData;
                     var f = new FireOrig
                     {
-                        Ps = ps, Start = ps.main.startColor, Life = ps.colorOverLifetime.color, Speed = ps.colorBySpeed.color,
+                        // deep copies: the originals must not change when the live particle colours are recoloured
+                        Ps = ps, Start = Copy(ps.main.startColor), Life = Copy(ps.colorOverLifetime.color), Speed = Copy(ps.colorBySpeed.color),
                         HasCustom1 = cd.enabled && cd.GetMode(ParticleSystemCustomData.Custom1) == ParticleSystemCustomDataMode.Color,
                         HasCustom2 = cd.enabled && cd.GetMode(ParticleSystemCustomData.Custom2) == ParticleSystemCustomDataMode.Color,
                         Amount = fire ? 1f : swirl ? SwirlTint : CenterTint,
                         Mix = swirl && !fire,
                     };
-                    if (f.HasCustom1) f.Custom1 = cd.GetColor(ParticleSystemCustomData.Custom1);
-                    if (f.HasCustom2) f.Custom2 = cd.GetColor(ParticleSystemCustomData.Custom2);
+                    if (f.HasCustom1) f.Custom1 = Copy(cd.GetColor(ParticleSystemCustomData.Custom1));
+                    if (f.HasCustom2) f.Custom2 = Copy(cd.GetColor(ParticleSystemCustomData.Custom2));
                     o.Fire.Add(f);
                 }
                 if (Perf.On) Dump(tw, o);

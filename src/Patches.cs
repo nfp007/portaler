@@ -95,25 +95,6 @@ namespace Portaler
             private static void Postfix(ref bool __result) => __result = true;
         }
 
-        /// <summary>
-        /// The game switches a portal's fire and swirl off while you carry ore or metal (it would refuse you).
-        /// Portaler lets everything through by default, so the portal keeps glowing (and shows its colour) anyway.
-        /// </summary>
-        [HarmonyPatch(typeof(TeleportWorld), "UpdatePortal")]
-        private static class TeleportWorld_UpdatePortal
-        {
-            private static void Postfix(TeleportWorld __instance)
-            {
-                try
-                {
-                    if (PortalClient.Restricted || __instance.m_target_found == null || __instance.m_proximityRoot == null) return;
-                    bool near = Player.GetClosestPlayer(__instance.m_proximityRoot.position, __instance.m_activationRange) != null;
-                    __instance.m_target_found.SetActive(near);
-                }
-                catch { }
-            }
-        }
-
         /// <summary>Turn off vanilla pairing of portals with the same name.</summary>
         [HarmonyPatch(typeof(Game), nameof(Game.ConnectPortals))]
         private static class Game_ConnectPortals
