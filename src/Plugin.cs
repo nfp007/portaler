@@ -15,7 +15,7 @@ namespace Portaler
     {
         public const string Guid = "nfp007.Portaler";
         public const string Name = "Portaler";
-        public const string Version = "2.0.9.1";
+        public const string Version = "2.0.9.2";
 
         internal static Plugin Instance;
         internal static ManualLogSource Log;
@@ -59,7 +59,7 @@ namespace Portaler
             UiScale = Config.Bind("List", "UIScale", 1f, new BepInEx.Configuration.ConfigDescription(
                 "Extra size of Portaler's list and windows, on top of the game's own UI scale setting (1 = follow the game).",
                 new BepInEx.Configuration.AcceptableValueRange<float>(0.5f, 2f)));
-            BringTames = Config.Bind("Travel", "BringTames", true, "Tamed animals that follow you (wolves, boars, lox...) travel with you through Portaler. Off automatically when TeleportEverything or a similar mod is installed.");
+            BringTames = Config.Bind("Travel", "BringTames", true, "Tamed animals that follow you (wolves, boars, lox...) travel with you through Portaler. Off automatically when TeleportEverything is installed.");
             BringMounts = Config.Bind("Travel", "BringMounts", true, "Riding a lox or other mount into a portal takes it along; you sit in the saddle again on arrival.");
             BringCarts = Config.Bind("Travel", "BringCarts", true, "A cart you pull travels with you (with its load) and is hitched again on arrival. With VanillaRestrictions on, a cart with ore or metal stays behind.");
             GraveDialog = Config.Bind("List", "GraveDialog", true, "After you die, the first portal you walk into asks: travel to the portal nearest your grave, or to your last trip.");

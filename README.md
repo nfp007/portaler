@@ -169,7 +169,7 @@ Every feature says what is **🌐 shared** (the same for everybody on the server
 - Ride a lox into a portal: it comes along and you are back in the saddle on arrival.
 - Pull a cart into a portal: it comes along with its whole load and is hitched to you again on arrival. With `VanillaRestrictions` on, a cart carrying ore or metal stays behind.
 - Animals land on solid ground in front of the target portal.
-- If TeleportEverything (or a similar mod) is installed, Portaler leaves this to that mod.
+- If TeleportEverything is installed, Portaler leaves this to that mod.
 - 👤 Personal: settings `[Travel] BringTames`, `BringMounts`, `BringCarts` (all on by default).
 
 **17. Size follows the game's UI scale**
@@ -188,6 +188,8 @@ Every feature says what is **🌐 shared** (the same for everybody on the server
 - 👤 Personal.
 
 All shared data is stored on the server, next to the world save, and survives restarts and mod updates.
+
+**Compatibility:** Portaler replaces how portals work, so it **does not work together with any other portal mod** (for example TargetPortal, AdjustablePortals or other portal network / destination mods). Use Portaler on its own.
 
 <details>
 <summary><b>Controls</b> (click to show)</summary>
@@ -244,7 +246,7 @@ Config file: `BepInEx/config/nfp007.Portaler.cfg` (created on first start). `[Se
 | `[Controls] LinkKey` | `L` | Link the portal you stand in to the hovered name or pin; in the world: link or unlink the portal you look at. |
 | `[Controls] ColorKey` | `C` | Opens the Edit portal window for the hovered name, pin, or the portal you look at. |
 | `[List] UIScale` | `1` | Extra size of Portaler's list and windows, on top of the game's UI scale (0.5–2). |
-| `[Travel] BringTames` | `true` | Tamed animals that follow you travel along (off when TeleportEverything or a similar mod is installed). |
+| `[Travel] BringTames` | `true` | Tamed animals that follow you travel along (off when TeleportEverything is installed). |
 | `[Travel] BringMounts` | `true` | A mount you ride comes along; you are back in the saddle on arrival. |
 | `[Travel] BringCarts` | `true` | A cart you pull comes along with its load and is hitched again on arrival. |
 | `[List] GraveDialog` | `true` | After a death, the first portal you walk into offers the portal nearest your grave and your last trip. |

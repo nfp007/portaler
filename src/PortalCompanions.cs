@@ -12,7 +12,7 @@ namespace Portaler
     /// in front of the target portal. That area is usually not loaded yet; the game keeps them there and shows them
     /// when you arrive. After arrival they are put on the ground next to you, the cart is hitched again and you
     /// sit in the saddle again. Personal settings [Travel] BringTames / BringMounts / BringCarts.
-    /// Switched off when TeleportEverything (or a similar mod) is installed, so animals never get moved twice.
+    /// Switched off when TeleportEverything is installed, so animals never get moved twice.
     /// </summary>
     internal static class PortalCompanions
     {
@@ -53,7 +53,7 @@ namespace Portaler
                 foreach (var kv in BepInEx.Bootstrap.Chainloader.PluginInfos)
                 {
                     string id = kv.Key ?? "", name = kv.Value?.Metadata?.Name ?? "";
-                    foreach (var part in new[] { "TeleportEverything", "TeleportCreatures", "TeleportCarts", "AdjustablePortals" })
+                    foreach (var part in new[] { "TeleportEverything", "TeleportCreatures", "TeleportCarts" })
                         if (id.IndexOf(part, System.StringComparison.OrdinalIgnoreCase) >= 0 || name.IndexOf(part, System.StringComparison.OrdinalIgnoreCase) >= 0)
                         {
                             _otherMod = true;

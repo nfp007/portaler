@@ -1,7 +1,8 @@
 # Changelog
 
 ## 2.0.9
-- **Tames, mounts and carts travel with you**: tamed animals that follow you (up to 8, within about 12 m), the mount you ride (you are back in the saddle on arrival) and the cart you pull (with its load, hitched again on arrival) come along on every Portaler trip. Animals land on solid ground in front of the target portal. With `VanillaRestrictions` on, a cart carrying ore or metal stays behind. New settings `[Travel] BringTames`, `BringMounts`, `BringCarts` (on by default); off automatically when TeleportEverything or a similar mod is installed.
+- **Tames, mounts and carts travel with you**: tamed animals that follow you (up to 8, within about 12 m), the mount you ride (you are back in the saddle on arrival) and the cart you pull (with its load, hitched again on arrival) come along on every Portaler trip. Animals land on solid ground in front of the target portal. With `VanillaRestrictions` on, a cart carrying ore or metal stays behind. New settings `[Travel] BringTames`, `BringMounts`, `BringCarts` (on by default); off automatically when TeleportEverything is installed.
+- README: Portaler does not work together with other portal mods (TargetPortal, AdjustablePortals, …).
 - **UI scale**: Portaler's list and windows now follow Valheim's own UI scale setting. New setting `[List] UIScale` for extra size on top.
 - Only the client changes; the server does not need to be updated.
 
