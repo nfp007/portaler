@@ -18,7 +18,7 @@ namespace Portaler
         private static Vector2 _padRowScreen;
         private static readonly Vector2 Nowhere = new Vector2(-9999f, -9999f);
         private static Vector2 _padPoint = Nowhere;
-        private static float _viewH = 400f;
+        private static float _viewH = 400f, _viewTopGui, _viewLeftGui;
         private static readonly List<int> GroupStarts = new List<int>();
         private static readonly List<Rect> PadTargets = new List<Rect>();
 
@@ -213,7 +213,7 @@ namespace Portaler
         {
             _padPortal = p;
             _hovered = p;
-            _padRowScreen = GUIUtility.GUIToScreenPoint(new Vector2(r.x + 40f, r.yMax));
+            _padRowScreen = new Vector2(_viewLeftGui + r.x + 40f, _viewTopGui + r.yMax - _scroll.y);
             if (!_padScroll) return;
             _padScroll = false;
             float top = GroupStarts.Contains(vis) ? 44f : 6f; // first row of a group: show its title too

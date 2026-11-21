@@ -15,7 +15,7 @@ namespace Portaler
     {
         public const string Guid = "nfp007.Portaler";
         public const string Name = "Portaler";
-        public const string Version = "2.0.8";
+        public const string Version = "2.0.9.1";
 
         internal static Plugin Instance;
         internal static ManualLogSource Log;
@@ -28,7 +28,8 @@ namespace Portaler
         internal static BepInEx.Configuration.ConfigEntry<bool> FloatingNames;
         internal static BepInEx.Configuration.ConfigEntry<float> FloatingNameDistance;
         internal static BepInEx.Configuration.ConfigEntry<bool> FloatingNamePictureFont;
-        internal static BepInEx.Configuration.ConfigEntry<bool> RowDistance, Gamepad, GraveDialog;
+        internal static BepInEx.Configuration.ConfigEntry<bool> RowDistance, Gamepad, GraveDialog, BringTames, BringMounts, BringCarts;
+        internal static BepInEx.Configuration.ConfigEntry<float> UiScale;
         internal static BepInEx.Configuration.ConfigEntry<bool> HoverShowsMap, HoverReturn, HoverLine;
         internal static BepInEx.Configuration.ConfigEntry<bool> PerfLog, QuickArrival;
         internal static BepInEx.Configuration.ConfigEntry<float> HoverDelay, HoverZoomMeters, HoverReturnDelay, PinSizePreview, PinSizeHover, HoverMaxFitMeters, HoverMoveSeconds;
@@ -55,6 +56,12 @@ namespace Portaler
             FloatingNamePictureFont = Config.Bind("World", "FloatingNamePictureFont", true, "Write the names above portals in the gold Portaler letters (false = the normal game font).");
 
             RowDistance = Config.Bind("List", "DistanceOnEveryRow", true, "Show the distance next to every portal in the list (false = only when sorted by distance).");
+            UiScale = Config.Bind("List", "UIScale", 1f, new BepInEx.Configuration.ConfigDescription(
+                "Extra size of Portaler's list and windows, on top of the game's own UI scale setting (1 = follow the game).",
+                new BepInEx.Configuration.AcceptableValueRange<float>(0.5f, 2f)));
+            BringTames = Config.Bind("Travel", "BringTames", true, "Tamed animals that follow you (wolves, boars, lox...) travel with you through Portaler. Off automatically when TeleportEverything or a similar mod is installed.");
+            BringMounts = Config.Bind("Travel", "BringMounts", true, "Riding a lox or other mount into a portal takes it along; you sit in the saddle again on arrival.");
+            BringCarts = Config.Bind("Travel", "BringCarts", true, "A cart you pull travels with you (with its load) and is hitched again on arrival. With VanillaRestrictions on, a cart with ore or metal stays behind.");
             GraveDialog = Config.Bind("List", "GraveDialog", true, "After you die, the first portal you walk into asks: travel to the portal nearest your grave, or to your last trip.");
             Gamepad = Config.Bind("Controls", "Gamepad", true, "Use the portal list with a gamepad (D-pad moves, A travels, X favorite, Y menu, B back). Off = the gamepad works on the map as in the vanilla game.");
             HoverShowsMap = Config.Bind("Map", "HoverShowsMap", true, "Hovering a name in the list moves the map to that portal.");

@@ -15,7 +15,61 @@ namespace Portaler
         public static bool MouseOverList { get; private set; }
 
         /// <summary>Right edge of the list panel on screen (pixels), 0 when closed.</summary>
-        public static float PanelRight => PortalClient.Active ? _rect.xMax : 0f;
+        public static float PanelRight => PortalClient.Active ? _rect.xMax * Scale : 0f;
+
+        // ---------- size: follows the game's UI scale setting (times [List] UIScale) ----------
+
+        /// <summary>How much bigger than 1:1 Portaler's windows are drawn this frame.</summary>
+        public static float Scale { get; private set; } = 1f;
+        /// <summary>Screen size in Portaler's own (scaled) units.</summary>
+        private static float ScreenW => Screen.width / Scale;
+        private static float ScreenH => Screen.height / Scale;
+        /// <summary>The mouse, in Portaler's units (y down).</summary>
+        public static Vector2 MouseGui()
+        {
+            Vector3 m = ZInput.pointerPosition;
+            return new Vector2(m.x, Screen.height - m.y) / Scale;
+        }
+
+        private static readonly System.Reflection.FieldInfo GameGuiScaleField = HarmonyLib.AccessTools.Field(typeof(GuiScaler), "m_largeGuiScale");
+        private static float GameGuiScale() => GameGuiScaleField != null ? (float)GameGuiScaleField.GetValue(null) : 1f;
+
+        private static int _scaleFrame = -1;
+        private static float _scaleCached = 1f;
+
+        private static float CurrentScale()
+        {
+            if (_scaleFrame == Time.frameCount) return _scaleCached; // OnGUI runs several times a frame
+            _scaleFrame = Time.frameCount;
+            _scaleCached = ComputeScale();
+            return _scaleCached;
+        }
+
+        private static float ComputeScale()
+        {
+            float game = 1f;
+            try
+            {
+                if (GameGuiScaleField != null)
+                {
+                    float def = GuiScaler.PlatformDefaultScaling;
+                    float v = GameGuiScale();
+                    if (v > 0f && def > 0f) game = v / def; // 1 at the game's default setting: Portaler keeps its usual size there
+                }
+            }
+            catch { }
+            return Mathf.Clamp(game * Plugin.UiScale.Value, 0.5f, 2.5f);
+        }
+
+        /// <summary>Called from OnGUI: everything Portaler draws is scaled around the top left corner.</summary>
+        public static void Draw()
+        {
+            Scale = CurrentScale();
+            var old = GUI.matrix;
+            if (!Mathf.Approximately(Scale, 1f)) GUI.matrix = Matrix4x4.Scale(new Vector3(Scale, Scale, 1f));
+            try { DrawInner(); }
+            finally { GUI.matrix = old; }
+        }
 
         /// <summary>Mouse is over the list, or a button was pressed on it and is still held (scrollbar drag).</summary>
         public static bool ListHasMouse => MouseOverList || _pressedInList;
@@ -104,7 +158,7 @@ namespace Portaler
             _padWin = -1;
         }
 
-        public static void Draw()
+        private static void DrawInner()
         {
             if (!PortalClient.Active && _renameFor != null) { MouseOverList = false; HoveredPortal = null; DrawRenameAlone(); return; }
             if (!PortalClient.Active)
@@ -124,7 +178,7 @@ namespace Portaler
             EnsureStyles();
 
             float top = 80f;
-            _rect = new Rect(16f, top, _width, Mathf.Max(300f, Screen.height - top - 70f));
+            _rect = new Rect(16f, top, _width, Mathf.Max(300f, ScreenH - top - 70f));
             var ev = Event.current;
             PortalInfo travel = null, toggle = null;
             // moving or clicking the mouse ends arrow-key control
@@ -226,7 +280,10 @@ namespace Portaler
                 GUILayout.EndScrollView();
                 if (ev.type == EventType.Repaint)
                 {
-                    _viewH = GUILayoutUtility.GetLastRect().height;
+                    var view = GUILayoutUtility.GetLastRect();
+                    _viewH = view.height;
+                    _viewTopGui = _rect.y + 18f + view.y;   // the scroll view's corner in window units (for the gamepad menu)
+                    _viewLeftGui = _rect.x + 22f + view.x;
                     _visCount = _vis;
                     if (_visCount > 0 && _padFocus >= _visCount) _padFocus = _visCount - 1;
                 }
@@ -702,7 +759,7 @@ namespace Portaler
             // Right click anywhere on the row = menu; left click on the star = favorite toggle.
             if (ev.type == EventType.MouseDown && r.Contains(ev.mousePosition))
             {
-                if (ev.button == 1) { OpenMenu(p, GUIUtility.GUIToScreenPoint(ev.mousePosition)); ev.Use(); }
+                if (ev.button == 1) { OpenMenu(p, MouseGui()); ev.Use(); }
                 else if (ev.button == 0 && star.Contains(ev.mousePosition)) { toggle = p; ev.Use(); }
             }
 
@@ -848,7 +905,7 @@ namespace Portaler
         private static Rect PlayersRect(int n)
         {
             float h = 70f + Mathf.Max(1, n) * (PlayerRowH + 6f) + 56f;
-            h = Mathf.Min(h, Screen.height - 80f);
+            h = Mathf.Min(h, ScreenH - 80f);
             return Centered(460f, h);
         }
 
@@ -1028,8 +1085,8 @@ namespace Portaler
         private static Rect MenuRect()
         {
             float h = MenuTop + MenuItems.Count * (MenuItemH + MenuGap) + 8f;
-            float x = Mathf.Min(_menuPos.x + 4f, Screen.width - MenuW - 4f);
-            float y = Mathf.Min(_menuPos.y, Screen.height - h - 4f);
+            float x = Mathf.Min(_menuPos.x + 4f, ScreenW - MenuW - 4f);
+            float y = Mathf.Min(_menuPos.y, ScreenH - h - 4f);
             return new Rect(Mathf.Max(4f, x), Mathf.Max(4f, y), MenuW, h);
         }
 
@@ -1108,7 +1165,7 @@ namespace Portaler
         // ----- link dialog (middle of the screen) -----
 
         private static Rect Centered(float w, float h) =>
-            new Rect(Mathf.Round((Screen.width - w) / 2f), Mathf.Round(Mathf.Max(10f, (Screen.height - h) / 2f)), w, h);
+            new Rect(Mathf.Round((ScreenW - w) / 2f), Mathf.Round(Mathf.Max(10f, (ScreenH - h) / 2f)), w, h);
 
         private const float LinkW = 560f, LinkH = 440f;
         private static Rect LinkRect() => Centered(LinkW, LinkH);
@@ -1223,7 +1280,7 @@ namespace Portaler
         private static void DimScreen()
         {
             var old = GUI.color; GUI.color = new Color(0f, 0f, 0f, 0.35f);
-            GUI.DrawTexture(new Rect(0, 0, Screen.width, Screen.height), Texture2D.whiteTexture);
+            GUI.DrawTexture(new Rect(0, 0, ScreenW, ScreenH), Texture2D.whiteTexture);
             GUI.color = old;
         }
 
@@ -1650,7 +1707,7 @@ namespace Portaler
             _warm = true;
             var sw = System.Diagnostics.Stopwatch.StartNew();
             EnsureStyles();
-            RequestPanel((int)_width, (int)Mathf.Max(300f, Screen.height - 80f - 70f));
+            RequestPanel((int)_width, (int)Mathf.Max(300f, ScreenH - 80f - 70f));
             try { FlowLine.Prewarm(Minimap.instance); } catch (System.Exception e) { Plugin.Log.LogWarning("Line prewarm: " + e.Message); }
             if (Perf.On) Plugin.Log.LogInfo($"[Perf] Prewarm after spawn: {sw.Elapsed.TotalMilliseconds:0} ms (panel texture continues in the background)");
         }
@@ -1762,7 +1819,7 @@ namespace Portaler
 
             // Wide enough for a 25 character name (+ star, arrow, distance tag, padding, frame, scrollbar).
             float nameWidth = _rowText.CalcSize(Tmp(new string('M', NameChars))).x;
-            _width = Mathf.Clamp(nameWidth + 200f, 520f, Screen.width * 0.45f);
+            _width = Mathf.Clamp(nameWidth + 200f, 520f, Mathf.Max(520f, ScreenW * 0.45f));
         }
 
         private static Font FindValheimFont()

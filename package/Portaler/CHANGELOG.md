@@ -1,5 +1,10 @@
 # Changelog
 
+## 2.0.9
+- **Tames, mounts and carts travel with you**: tamed animals that follow you (up to 8, within about 12 m), the mount you ride (you are back in the saddle on arrival) and the cart you pull (with its load, hitched again on arrival) come along on every Portaler trip. Animals land on solid ground in front of the target portal. With `VanillaRestrictions` on, a cart carrying ore or metal stays behind. New settings `[Travel] BringTames`, `BringMounts`, `BringCarts` (on by default); off automatically when TeleportEverything or a similar mod is installed.
+- **UI scale**: Portaler's list and windows now follow Valheim's own UI scale setting. New setting `[List] UIScale` for extra size on top.
+- Only the client changes; the server does not need to be updated.
+
 ## 2.0.8
 - **One window for portal settings**: right click on a list row or a map pin now shows **Edit portal...**, which opens the Edit portal window (name, type, colour). The separate "Colour..." and "Category..." entries and their old windows are gone; the menu is shorter (Travel here, Edit portal..., Link..., Remove link, Favorite).
 - **C** and **T** also open the Edit portal window (in the list, on a map pin, and **C** on a portal in the world). On a portal in the world, the game's "[E] Set tag" is now "[E] Edit portal" (same window), next to "[L] Link".
