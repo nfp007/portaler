@@ -77,7 +77,7 @@ namespace Portaler
                 var p = PortalClient.PortalAtMapPoint(ScreenToWorld(__instance, ZInput.pointerPosition), PinRadius(__instance) * 1.5f);
                 if (p == null) return true; // empty map: vanilla behaviour
                 Vector2 m = ZInput.pointerPosition;
-                PortalUI.OpenMenu(p, new Vector2(m.x, Screen.height - m.y));
+                PortalUI.OpenMenu(p, PortalUI.MouseGui());
                 return false;
             }
         }

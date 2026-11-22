@@ -1,8 +1,8 @@
 {
   "name": "Portaler",
-  "version_number": "2.0.8",
+  "version_number": "2.1.0",
   "website_url": "https://github.com/nfp007/portaler",
-  "description": "Best portal mod for Valheim!!! Every portal goes everywhere: live map preview, one-way links, coloured portals, favorites shared with friends, back to your grave, search, gamepad. Quick arrival: about half the vanilla wait. Server synced.",
+  "description": "Best portal mod for Valheim!!! Every portal goes everywhere: live map preview, one-way links, coloured portals, tames, mounts and carts come along, favorites shared with friends, back to your grave, search, gamepad. Quick arrival. Server synced.",
   "dependencies": [
     "denikson-BepInExPack_Valheim-5.4.2351"
   ]

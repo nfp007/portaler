@@ -884,8 +884,12 @@ namespace Portaler
             Deactivate(true);
             Perf.End(Perf.S.MapClose, pt);
             pt = Perf.Begin();
+            // tames that follow you, the mount you ride and the cart you pull come along
+            var companions = PortalCompanions.Collect(player, _sourceAllowAllItems, Restricted);
+            if (companions?.Mount != null) player.StopDoodadControl(); // off the saddle before the jump
             QuickArrival.Begin(player);
-            player.TeleportTo(exit, target.Rotation, true);
+            bool started = player.TeleportTo(exit, target.Rotation, true);
+            if (started && companions != null) PortalCompanions.Send(player, companions, exit, target.Rotation);
             Perf.End(Perf.S.TpStart, pt);
             Plugin.Log.LogInfo($"Teleporting to {target.DisplayName}");
         }

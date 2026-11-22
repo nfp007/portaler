@@ -6,6 +6,7 @@ package/*.zip
 
 # game and BepInEx DLLs (copyrighted, never commit)
 lib/
+lib
 
 # IDE
 .vs/

@@ -21,6 +21,7 @@ Built for servers that play together:
 - **Automatic names** by biome (`BF-007`, `MO-012`), and one compact **Edit portal** window (**E**) for name, type and colour.
 - **Back to your grave**: after a death, the first portal offers the portal nearest your grave and your last trip, one key press away.
 - **Gamepad support**: the list and all its windows work with a controller (Steam Deck too).
+- **Tames, mounts and carts**: your wolves, your lox (with you in the saddle) and your loaded cart travel with you.
 - **Arrow keys**: move through the list and travel without the mouse.
 
 Everybody has the same rights: anyone can rename, set categories or change shared favorites. Everything shared is synced through the server and kept with the world save, so it survives restarts and mod updates.
@@ -163,18 +164,33 @@ Every feature says what is **🌐 shared** (the same for everybody on the server
 - The search box and the **Show:** category filter still need a mouse or keyboard.
 - 👤 Personal: setting `[Controls] Gamepad` (on by default).
 
-**16. Back to your grave**
+**16. Tames, mounts and carts travel with you**
+- Tamed animals that **follow you** (wolves, boars, lox, Ask…) come along on every Portaler trip: from the list, a map pin or a linked portal. Up to 8, within about 12 m. Penned animals that don't follow you stay home.
+- Ride a lox into a portal: it comes along and you are back in the saddle on arrival.
+- Pull a cart into a portal: it comes along with its whole load and is hitched to you again on arrival. With `VanillaRestrictions` on, a cart carrying ore or metal stays behind.
+- The cart lands straight behind you, clear of the portal (you step forward a little). Portaler looks for flat ground with nothing in the way – roof, wall, another cart; if the first place doesn't fit it tries a few more. No room anywhere: the cart stays at the start portal and you get a message.
+- Animals land on solid ground in front of the target portal.
+- If TeleportEverything is installed, Portaler leaves this to that mod.
+- 👤 Personal: settings `[Travel] BringTames`, `BringMounts`, `BringCarts` (all on by default).
+
+**17. Size follows the game's UI scale**
+- Portaler's list and windows grow and shrink with Valheim's own **UI scale** setting (Settings → Accessibility). `[List] UIScale` makes them bigger or smaller on top of that.
+- 👤 Personal.
+
+**18. Back to your grave**
 - After you die, the first portal you walk into shows a small window: **Nearest to your grave** (the portal closest to your newest grave marker) and **Last trip** (where you went before you died), each with its distance. Same portal for both: one button.
 - Press **1** or **2** (Enter = the first one), click a button, or **Close** (Esc) to use the list as usual. It shows once per death.
 - It uses the game's own grave marker on your map; if you removed the marker, the window does not show.
 - 👤 Personal: setting `[List] GraveDialog` (on by default).
 
-**17. Arrow keys**
+**19. Arrow keys**
 - Arrow keys up / down move through the list, left / right jump between groups, **Enter** travels. The windows (menu, link, players, grave) work the same way; in Edit portal the keyboard types the name.
 - Moving the mouse switches back to mouse control.
 - 👤 Personal.
 
 All shared data is stored on the server, next to the world save, and survives restarts and mod updates.
+
+**Compatibility:** Portaler replaces how portals work, so it **does not work together with any other portal mod** (for example TargetPortal, AdjustablePortals or other portal network / destination mods). Use Portaler on its own.
 
 <details>
 <summary><b>Controls</b> (click to show)</summary>
@@ -230,6 +246,10 @@ Config file: `BepInEx/config/nfp007.Portaler.cfg` (created on first start). `[Se
 | `[Controls] CategoryKey` | `T` | Also opens the Edit portal window for the hovered portal. |
 | `[Controls] LinkKey` | `L` | Link the portal you stand in to the hovered name or pin; in the world: link or unlink the portal you look at. |
 | `[Controls] ColorKey` | `C` | Opens the Edit portal window for the hovered name, pin, or the portal you look at. |
+| `[List] UIScale` | `1` | Extra size of Portaler's list and windows, on top of the game's UI scale (0.5–2). |
+| `[Travel] BringTames` | `true` | Tamed animals that follow you travel along (off when TeleportEverything is installed). |
+| `[Travel] BringMounts` | `true` | A mount you ride comes along; you are back in the saddle on arrival. |
+| `[Travel] BringCarts` | `true` | A cart you pull comes along with its load and is hitched again on arrival. |
 | `[List] GraveDialog` | `true` | After a death, the first portal you walk into offers the portal nearest your grave and your last trip. |
 | `[Controls] Gamepad` | `true` | Use the portal list with a gamepad (see Controls). `false` = the gamepad works on the map as in the vanilla game. |
 | `[World] FloatingNames` | `true` | Show the destination's name above linked portals near you. |
